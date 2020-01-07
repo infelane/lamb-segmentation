@@ -6,25 +6,37 @@ from PIL import Image
 
 from plotting import concurrent
 
-class Data(object):
-    imgs = {}
+class Data(dict):
+    _imgs = {}
     def __init__(self):
         
-        assert self.imgs
-        raise ValueError('')
+        assert self._imgs
+        
+        super().__init__(self._imgs)
     
     def get(self, name=None):
         """
-        Returns all images
+        If name == None: returns all images
         """
         
         if name is not None:
-            assert name in self.imgs
-            return self.imgs[name]
+            if isinstance(name, str):
+                assert name in self._imgs
+                return self._imgs[name]
+            elif isinstance(name, (list, tuple)):
+                
+                l = []
+                for name_i in name:
+                    assert name_i in self._imgs
+                    l.append(self._imgs[name_i])
+                return l
+                
+            else:
+                raise KeyError(f"Don't know how to handle: {name}")
         
         else:
             # Return all images
-            return self.imgs
+            return self._imgs
         
     def plot(self):
         imgs = self.get()
@@ -34,8 +46,7 @@ class Data(object):
     
         concurrent(img_list, titles=keys)
         
-        
-        
+    
 class DataFolder(Data):
     def __init__(self, folder):
     
@@ -46,4 +57,7 @@ class DataFolder(Data):
         
                 img = Image.open(path)
                 
-                self.imgs[root] = img
+                self._imgs[root] = img
+
+        super().__init__()
+                

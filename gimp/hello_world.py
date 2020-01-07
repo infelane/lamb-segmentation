@@ -1,0 +1,1 @@
+/home/lameeus/snap/gimp/227/.config/GIMP/2.10/plug-ins/hello_world.py

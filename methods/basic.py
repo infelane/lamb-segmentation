@@ -2,6 +2,9 @@ import numpy as np
 
 import skimage.filters as filters
 
+from data.preprocessing import zero2one
+
+
 class Base(object):
     def inference(self, x_img):
         return self.method(x_img)
@@ -15,6 +18,24 @@ class Threshholding(Base):
         
         return np.greater_equal(gray, thresh)
     
+
+class NeuralNet(Base):
+    def __init__(self, model):
+        self.model = model
+    
+    def method(self, x_img):
+        
+        x_pre = zero2one(x_img)
+        
+        x_img_input = np.reshape(x_pre, newshape=(1, ) + x_pre.shape)
+        
+        y = self.model.predict(x_img_input)
+        return y[0]
+    
+    def train(self, x, y_tr, validation=None, epochs=20):
+        self.model.fit(x, y_tr, epochs=epochs,
+                       validation_data=validation)
+
 
 def local_thresholding(x_img, ext:int=200):
     gray = np.mean(x_img, axis=2)

@@ -2,6 +2,7 @@ import numpy as np
 
 from .preprocessing import zero2one
 
+
 def annotations2y(img_annot_rgb, thresh: float = 1.):
     shape = np.shape(img_annot_rgb)
     shape_class = [shape[0], shape[1], 2]
@@ -28,5 +29,5 @@ def annotations2y(img_annot_rgb, thresh: float = 1.):
     return img_class
 
 
-def y2bin_annot(y):
+def y2bool_annot(y):
     return np.any(y, axis=-1)
