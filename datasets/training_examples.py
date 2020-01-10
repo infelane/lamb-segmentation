@@ -3,7 +3,7 @@ import numpy as np
 from .training import TrainData
 
 from data.example_splits import panel19withoutRightBot
-from data.main import annotations2y
+from data.conversion_tools import annotations2y
 from data.modalities import get_mod_set
 from data.preprocessing import img2array
 from datasets.examples import get_19hand

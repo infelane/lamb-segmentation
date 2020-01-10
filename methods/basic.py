@@ -33,8 +33,16 @@ class NeuralNet(Base):
         return y[0]
     
     def train(self, x, y_tr, validation=None, epochs=20):
-        self.model.fit(x, y_tr, epochs=epochs,
-                       validation_data=validation)
+        
+        from preprocessing.image import get_flow
+        flow_tr = get_flow(x[0], y_tr[0])
+        
+        self.get_model().fit_generator(flow_tr, epochs=epochs, steps_per_epoch=100, validation_data=validation)
+        # self.get_model().fit(x, y_tr, epochs=epochs,
+        #                validation_data=validation)
+        
+    def get_model(self):
+        return self.model
 
 
 def local_thresholding(x_img, ext:int=200):

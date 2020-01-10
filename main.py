@@ -1,5 +1,5 @@
 from data.example_splits import panel19withoutRightBot
-from data.main import annotations2y, y2bool_annot
+from data.conversion_tools import annotations2y, y2bool_annot
 from data.modalities import get_mod_set
 from data.preprocessing import img2array
 from datasets.examples import get_19hand
@@ -23,8 +23,6 @@ if __name__ == '__main__':
     y = annotations2y(img_y)
     y_annot = y2bool_annot(y)
 
-
-
     y_tr, y_te = panel19withoutRightBot(y_annot)
     
     b = False
@@ -41,6 +39,11 @@ if __name__ == '__main__':
     
     x_te = train_data.get_x_test()
     y_te = train_data.get_y_test()
+    
+    if 1:
+        # Optimal Lr ~= 1e-1
+        from neuralNetwork.optimization import find_learning_rate
+        find_learning_rate(n.get_model(), (x, y_tr))
     
     n.train(x, y_tr, (x_te, y_te))
     
@@ -62,4 +65,3 @@ if __name__ == '__main__':
     concurrent([a.get('clean'), o], ['clean', 'prediction'])
     
     print('Done')
-    

@@ -1,9 +1,6 @@
 from .basic import NeuralNet
 
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Conv2D, Input, Flatten, Dense
-from tensorflow.keras.losses import categorical_crossentropy
-from tensorflow.keras.optimizers import Nadam
+from neuralNetwork.import_keras import *
 
 from data.modalities import modality_exist
 
@@ -20,8 +17,13 @@ def architecture0(n_in, k=1):
     return model
 
 
-def compile0(model, lr=1e5):
-    model.compile(Nadam(lr), loss=categorical_crossentropy)
+def compile0(model, lr=1e-1):
+    
+    # optimizer = Adam(lr)
+    # optimizer = Nadam(lr)
+    optimizer = SGD(lr)
+    
+    model.compile(optimizer, loss=categorical_crossentropy)
 
 
 def neuralNet0(mod):
