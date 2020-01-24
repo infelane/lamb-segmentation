@@ -28,6 +28,48 @@ def get_flow(x, y,
     return flow
 
 
+def get_class_imbalance(flow,
+                        n_batches=1000,
+                        verbose=1):
+    
+    from keras.preprocessing.image import Iterator
+    assert isinstance(flow, Iterator)
+
+    n_tot = 0
+    n_0 = 0
+    n_1 = 0
+    
+    for _ in range(n_batches):
+        _, y_i = flow.next()
+
+        assert y_i.shape[-1] == 2, 'Not implemented for more than 2 classes'
+        
+        y_i_0 = y_i[..., 0]
+        y_i_1 = y_i[..., 1]
+        
+        n_tot += y_i_0.size
+        n_0 += y_i_0.sum()
+        n_1 += y_i_1.sum()
+      
+    f_0 = n_0 / (n_0 + n_1)
+    
+    # Fraction of class 1, should ideally be 50%
+    f_1 = n_1 / (n_0 + n_1)
+
+    class_weight =  (1/2. / f_0 , 1/2. / f_1)
+    
+    if verbose:
+        print('class imbalance:\n'
+              f'\tf_1 = {f_1:.4f} = {100 * f_1:.2f}%\n'
+              f'\tn_0/n_1: {n_0 / n_1:.2f}')
+    
+        print(f'fraction annotated = {(n_0 + n_1) / n_tot:.4f} = {100 * (n_0 + n_1) / n_tot:.2f}%')
+
+        print(f'class weights = {class_weight}')
+
+    return class_weight
+
+
 # Extension of original keras imagedatagenerator
 class ImageDataGenerator(ImageDataGeneratorOrig):
     """

@@ -32,5 +32,26 @@ def img2array(img):
             return img_array
 
 
-def array2batch(x):
-    return x.reshape((1, ) + x.shape)
+def img2batch(x):
+    
+    assert (2 <= len(x.shape) <= 4), x.shape
+    
+    if len(x.shape) == 2:
+        return x.reshape((1,) + x.shape + (1,))
+    elif len(x.shape) == 3:
+        return x.reshape((1,) + x.shape)
+    else:
+        return x
+
+
+def batch2img(x):
+    
+    assert (len(x.shape) <= 4), x.shape
+    
+    if len(x.shape) == 4:
+    
+        assert x.shape[0] == 1, x.shape
+        
+        return x.reshape(x.shape[1:])
+    else:
+        return x

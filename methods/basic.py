@@ -2,7 +2,8 @@ import numpy as np
 
 import skimage.filters as filters
 
-from data.preprocessing import zero2one
+from data.preprocessing import img2batch, batch2img
+from preprocessing.image import get_flow
 
 
 class Base(object):
@@ -25,21 +26,19 @@ class NeuralNet(Base):
     
     def method(self, x_img):
         
-        x_pre = zero2one(x_img)
+        x = img2batch(x_img)
         
-        x_img_input = np.reshape(x_pre, newshape=(1, ) + x_pre.shape)
-        
-        y = self.model.predict(x_img_input)
+        y = self.model.predict(x)
         return y[0]
     
-    def train(self, x, y_tr, validation=None, epochs=20):
+    def train(self, x, y, validation=None, epochs=20, class_weight=None):
+        steps_per_epoch = 100
         
-        from preprocessing.image import get_flow
-        flow_tr = get_flow(x[0], y_tr[0])
+        flow_tr = get_flow(batch2img(x), batch2img(y))
         
-        self.get_model().fit_generator(flow_tr, epochs=epochs, steps_per_epoch=100, validation_data=validation)
-        # self.get_model().fit(x, y_tr, epochs=epochs,
-        #                validation_data=validation)
+        flow_va = get_flow(*map(batch2img, validation)) if (validation is not None) else None
+        
+        self.get_model().fit_generator(flow_tr, epochs=epochs, steps_per_epoch=100, validation_data=flow_va, class_weight=class_weight, validation_steps=steps_per_epoch//10)
         
     def get_model(self):
         return self.model

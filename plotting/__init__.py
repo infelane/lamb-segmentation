@@ -17,7 +17,7 @@ def concurrent(imgs, titles=None):
         if i == 0:
             ax1 = plt.subplot(n_h, n_w, i + 1)
         else:
-            plt.subplot(n_h, n_w, i + 1, sharex=ax1, sharey=ax1)
+            plt.subplot(n_h, n_w, i+1, sharex=ax1, sharey=ax1)
         
         _single_process(img)
         

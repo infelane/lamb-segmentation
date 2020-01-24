@@ -5,6 +5,11 @@ def get_10lamb():
     return d
 
 
+def get_13zach():
+    d = DataFolder('/scratch/lameeus/data/ghent_altar/input/hierarchy/13_small')
+    return d
+
+
 def get_19hand():
     d = DataFolder('/scratch/lameeus/data/ghent_altar/input/hierarchy/19_small')
     return d

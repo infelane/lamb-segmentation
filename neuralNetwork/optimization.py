@@ -4,7 +4,7 @@ import pandas as pd
 from .import_keras import *
 
 
-def find_learning_rate(model, training_data):
+def find_learning_rate(model, training_data, class_weight):
     
     lr0 = 1e-10
     lr1 = 1e+10
@@ -17,8 +17,14 @@ def find_learning_rate(model, training_data):
         return lr_range[epoch]
 
     lrScheduler = LearningRateScheduler(scheduler)
-    
-    hist = model.fit(*training_data, epochs=n+1, callbacks=[lrScheduler])
+
+    from keras.preprocessing.image import Iterator
+    if isinstance(training_data, Iterator):
+        flow_tr = training_data     # alias
+        hist = model.fit_generator(flow_tr, epochs=n+1, steps_per_epoch=100, callbacks=[lrScheduler],
+                                   class_weight=class_weight)
+    else:
+        hist = model.fit(*training_data, epochs=n+1, callbacks=[lrScheduler], class_weight=class_weight)
     
     df = pd.DataFrame.from_dict(hist.history)
     

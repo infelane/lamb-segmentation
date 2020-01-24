@@ -22,3 +22,22 @@ def panel19withoutRightBot(y):
     y_te[reg_rightbot, ...] = y[reg_rightbot, ...]
     
     return y_tr, y_te
+
+
+def panel13withoutRightBot(y):
+    """
+    for Shaoguang's paper comparison
+    """
+
+    assert y.shape[:2] == (1945, 1218)
+
+    y_tr = np.zeros(shape=y.shape, dtype=y.dtype)
+    y_te = np.zeros(shape=y.shape, dtype=y.dtype)
+
+    reg_rightbot = np.zeros(shape=y.shape[:2], dtype=bool)
+    reg_rightbot[1600:, 910:] = True
+
+    y_tr[~reg_rightbot, ...] = y[~reg_rightbot, ...]
+    y_te[reg_rightbot, ...] = y[reg_rightbot, ...]
+
+    return y_tr, y_te

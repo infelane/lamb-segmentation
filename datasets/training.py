@@ -1,4 +1,4 @@
-from data.preprocessing import array2batch
+from data.preprocessing import img2batch
 
 
 class TrainData():
@@ -10,16 +10,16 @@ class TrainData():
     
     def get_x_train(self):
         
-        return array2batch(self.x)
+        return img2batch(self.x)
     
     def get_x_test(self):
         
-        return array2batch(self.x)
+        return img2batch(self.x)
     
     def get_y_train(self):
         
-        return array2batch(self.y_tr)
+        return img2batch(self.y_tr)
     
     def get_y_test(self):
        
-        return array2batch(self.y_te)
+        return img2batch(self.y_te)
