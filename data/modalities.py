@@ -1,20 +1,28 @@
 modalities_list = ['clean', 'rgb', 'ir', 'irr', 'xray', 'uvf']
 
-modalities_set_names = ['clean', 'all']
+modalities_set_names = ['clean', 'all', '5']
 
 
-def get_mod_set(name):
+def get_mod_set(mod_name):
     
-    modality_exist(name)
+    _modality_exist(mod_name)
     
-    if name == 'all':
+    if mod_name == 'all':
         return modalities_list[:]
-    elif name == 'clean':
+    elif mod_name == 'clean':
         return modalities_list[0]
     else:
-        NotImplementedError(f'{name}')
+        try:
+            if int(mod_name) == 5:
+                return modalities_list[:5]
+            else: NotImplementedError()
+        except ValueError as verr:
+            pass
+            NotImplementedError()
         
-        
-def modality_exist(mod):
+        NotImplementedError(f'{mod_name}')
+
+
+def _modality_exist(mod):
     
-    assert mod in modalities_set_names
+    assert str(mod) in modalities_set_names, (mod, modalities_set_names)

@@ -100,4 +100,3 @@ class ImgExt(object):
     
     def __call__(self, *args, **kwargs):
         return self._img_ext
-

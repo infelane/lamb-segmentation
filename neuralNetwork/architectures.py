@@ -35,3 +35,31 @@ def fullyConnected1x1(n_in, k=1, batch_norm=False):
     model = Model(inputs=inputs, outputs=outputs)
     
     return model
+
+
+def convNet(n_in, k=1, batch_norm=False):
+    """
+
+    # :param n_in:
+    # :param k:
+    # :param batch_norm: If True, is applied after activation  https://blog.paperspace.com/busting-the-myths-about-batch-normalization/
+    # :return:
+    """
+
+    # BN before activation (although originally), seems worse in literature
+
+    shape = (None, None, n_in)
+
+    inputs = Input(shape=shape)
+
+    # TODO padding not *same*
+    l = Conv2D(k, (3, 3), activation='elu', padding='same')(inputs)
+
+    if batch_norm:
+        l = BatchNormalization()(l)
+
+    outputs = Conv2D(2, (1, 1), activation='softmax')(l)
+
+    model = Model(inputs=inputs, outputs=outputs)
+
+    return model

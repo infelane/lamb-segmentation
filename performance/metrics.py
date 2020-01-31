@@ -11,7 +11,7 @@ def accuracy_with0(y_true, y_pred, verbose=False):
     acc = (tn + tp) / (tn + tp + fn + fp)
     
     if verbose:
-        print('accuracy_with0 = {}'.format(acc))
+        print('accuracy_with0 = {}'.format(K.eval(acc)))
     
     return acc
 
@@ -29,7 +29,7 @@ def jaccard_with0(y_true, y_pred, verbose=False):
         jaccard = tp/(tp + fp + fn)
     
     if verbose:
-        print('jaccard_with0 = {}'.format(jaccard))
+        print('jaccard_with0 = {}'.format(K.eval(jaccard)))
     
     return jaccard
 
@@ -54,4 +54,6 @@ def _tp_tn_fp_fn(y_true, y_pred):
 
 def _sum_and(a, b):
     """ with a and b binary, it does count the amount of AND gives true"""
-    return K.sum(a * b)  # np.logical_and(a, b) )
+
+    # return K.sum(a * b)
+    return K.sum(K.cast(K.greater(a, 0), K.floatx()) *  K.cast(K.greater(b, 0), K.floatx()))

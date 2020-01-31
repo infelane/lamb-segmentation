@@ -6,8 +6,8 @@ from .import_keras import *
 
 def find_learning_rate(model, training_data, class_weight):
     
-    lr0 = 1e-10
-    lr1 = 1e+10
+    lr0 = 1e-5
+    lr1 = 1e+5
     n = 20
 
     lr_range = [lr0 * (lr1/lr0)**(i/n) for i in range(n+1)]
@@ -35,7 +35,6 @@ def find_learning_rate(model, training_data, class_weight):
     print_string = f'Expected optimal learning rate: {lr_optimal}'
     print(print_string)
 
-    plt.figure()
     df.plot('lr', 'loss', logx=True)
     plt.title(print_string)
     plt.show()

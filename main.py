@@ -13,7 +13,7 @@ from methods.examples import neuralNet0
 
 
 if __name__ == '__main__':
-    mod = 'all'
+    mod = 5    # 'clean'   #'all'
     
     ### Data
     a = get_19hand()
@@ -51,15 +51,21 @@ if __name__ == '__main__':
     x_te = train_data.get_x_test()
     y_te = train_data.get_y_test()
     
-    if 1:
+    b = 1
+    if b:
         from preprocessing.image import get_flow
-        flow_tr = get_flow(x[0], y_tr[0])
+        flow_tr = get_flow(x[0], y_tr[0],
+                           # w_patch=10    # Comes from 10
+                           )
 
         from preprocessing.image import get_class_imbalance
 
         class_weight = get_class_imbalance(flow_tr)
     
-    if 0:
+    b = 0
+    if b:
+        ### Finding optimal lr
+        
         from neuralNetwork.optimization import find_learning_rate
         if 0:
             find_learning_rate(n.get_model(), (x, y_tr), class_weight)
@@ -68,17 +74,18 @@ if __name__ == '__main__':
         else: lr_opt = find_learning_rate(n.get_model(), flow_tr, class_weight)
     else:
 
-        lr_opt = 1e-1
+        lr_opt = 1e-0   # Fully connected
+        lr_opt = 3e-4
     
     print(f'Optimal expected learning rate: {lr_opt}')
     
     n = neuralNet0(mod=mod, lr=lr_opt)
-    n.train(x, y_tr, (x_te, y_te), class_weight=class_weight, epochs=1000)
+    n.train(x, y_tr, (x_te, y_te), class_weight=class_weight, epochs=10)
     
-    mod_set = get_mod_set(mod)
     x_img = img2array(x)
     
-    o = n.inference(x_img)[..., 0]
+    y_pred = n.inference(x_img)
+    o = y_pred[..., 0]
     
     b = False
     if b:
@@ -94,6 +101,7 @@ if __name__ == '__main__':
     
     ### Evaluation
     
-    
+    from performance.testing import test
+    test(y_pred, y_tr, y_te)
     
     print('Done')
