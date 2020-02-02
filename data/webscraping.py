@@ -35,11 +35,11 @@ def preset_10lamb_ir():
 
 
 def preset_13zachary():
-    i_w_0 = 2*29
-    i_w_1 = 2*37
+    i_w_0 = 58
+    i_w_1 = 76
     
-    i_h_0 = 2*3
-    i_h_1 = 2*17
+    i_h_0 = 7
+    i_h_1 = 34
 
     return i_w_0, i_w_1, i_h_0, i_h_1
 
@@ -187,4 +187,3 @@ if __name__ == '__main__':
 
     im = get_im(panel_nr=10, modality='ir', b_grid=False)
     # save_im('/scratch/lameeus/data/ghent_altar/input/hierarchy/10_lamb/headlowres/toscale/ir_web.png', im, check_duplicate=True)
-    
