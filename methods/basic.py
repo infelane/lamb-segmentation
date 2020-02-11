@@ -1,14 +1,28 @@
+import os
+
 import numpy as np
 
 import skimage.filters as filters
 
-from data.preprocessing import img2batch, batch2img
+from keras.preprocessing.image import NumpyArrayIterator
+from keras.callbacks import ModelCheckpoint, TensorBoard
+# from tensorflow.keras.preprocessing.image import NumpyArrayIterator
+# from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+
+from data.preprocessing import batch2img
+from neuralNetwork.results import inference
 from preprocessing.image import get_flow
 
 
 class Base(object):
-    def inference(self, x_img):
+    def predict(self, x_img):
+        
         return self.method(x_img)
+
+    # To be implemented
+    def method(self, *args, **kwargs):
+        raise NotImplementedError('Has to be implemented in child class')
+    
 
 class Threshholding(Base):
     
@@ -21,24 +35,58 @@ class Threshholding(Base):
     
 
 class NeuralNet(Base):
-    def __init__(self, model):
+    def __init__(self, model, w_ext=0):
         self.model = model
+        
+        self.w_ext = w_ext
     
     def method(self, x_img):
+        return inference(self.model, x_img, w_ext=self.w_ext)
         
-        x = img2batch(x_img)
+    def train(self, xy, validation=None, epochs=20, verbose=1, info='scratch'):
+        """
         
-        y = self.model.predict(x)
-        return y[0]
-    
-    def train(self, x, y, validation=None, epochs=20, class_weight=None):
+        :param xy: Can be either tuple of (x, y) or Keras Generator
+        :param validation:
+        :param epochs:
+        :param class_weight:
+        :param verbose:
+        :return:
+        """
+        
+        def get_flow_xy(xy):
+            if isinstance(xy, tuple):
+                x, y = map(batch2img, xy)
+                
+                flow = get_flow(batch2img(x), batch2img(y))
+                return flow
+            
+            elif isinstance(xy, (NumpyArrayIterator, )):
+                return xy
+                
+            else:
+                raise TypeError(f'Unkown type for xy: {type(xy)}')
+        
         steps_per_epoch = 100
         
-        flow_tr = get_flow(batch2img(x), batch2img(y))
+        flow_tr = get_flow_xy(xy)
         
-        flow_va = get_flow(*map(batch2img, validation)) if (validation is not None) else None
+        flow_va = get_flow_xy(validation) if (validation is not None) else None
+
+        folder_checkpoint =  os.path.join('/scratch/lameeus/data/ghent_altar/net_weight/lamb_segmentation', info)
+        filepath_checkpoint = os.path.join(folder_checkpoint, 'w_{epoch}.h5')
+        folder_tensorboard = f'/scratch/lameeus/data/ghent_altar/logs/lamb_segmentation/{info}/'
         
-        self.get_model().fit_generator(flow_tr, epochs=epochs, steps_per_epoch=100, validation_data=flow_va, class_weight=class_weight, validation_steps=steps_per_epoch//10)
+        if not os.path.exists(folder_checkpoint):
+            os.makedirs(folder_checkpoint)
+            
+        checkpoint = ModelCheckpoint(filepath_checkpoint, save_weights_only=False)
+        tensorboard = TensorBoard(folder_tensorboard)
+        callbacks = [checkpoint, tensorboard]
+        
+        self.get_model().fit_generator(flow_tr, steps_per_epoch=steps_per_epoch,
+                                       validation_data=flow_va, validation_steps=steps_per_epoch//10,
+                                       epochs=epochs, verbose=verbose, callbacks=callbacks)
         
     def get_model(self):
         return self.model

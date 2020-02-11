@@ -4,7 +4,7 @@ import pandas as pd
 from .import_keras import *
 
 
-def find_learning_rate(model, training_data, class_weight):
+def find_learning_rate(model, training_data, class_weight, verbose=1):
     
     lr0 = 1e-5
     lr1 = 1e+5
@@ -22,9 +22,11 @@ def find_learning_rate(model, training_data, class_weight):
     if isinstance(training_data, Iterator):
         flow_tr = training_data     # alias
         hist = model.fit_generator(flow_tr, epochs=n+1, steps_per_epoch=100, callbacks=[lrScheduler],
-                                   class_weight=class_weight)
+                                   class_weight=class_weight,
+                                   verbose=verbose)
     else:
-        hist = model.fit(*training_data, epochs=n+1, callbacks=[lrScheduler], class_weight=class_weight)
+        hist = model.fit(*training_data, epochs=n+1, callbacks=[lrScheduler], class_weight=class_weight,
+                         verbose=verbose)
     
     df = pd.DataFrame.from_dict(hist.history)
     
@@ -35,9 +37,9 @@ def find_learning_rate(model, training_data, class_weight):
     print_string = f'Expected optimal learning rate: {lr_optimal}'
     print(print_string)
 
-    df.plot('lr', 'loss', logx=True)
-    plt.title(print_string)
-    plt.show()
-    
+    if verbose:
+        df.plot('lr', 'loss', logx=True)
+        plt.title(print_string)
+        
     return lr_optimal
     

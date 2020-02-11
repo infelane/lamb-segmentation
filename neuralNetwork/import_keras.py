@@ -12,8 +12,9 @@ if int(tf.__version__.split('.')[0]) >= 2:
         array_to_img
 
     """ NumpyArrayIterator is inherited from NumpyArrayIteratorPre """
-    from keras.preprocessing.image import image
-    NumpyArrayIteratorPre = image.NumpyArrayIterator
+    # from tensorflow.keras.preprocessing.image import image
+    # NumpyArrayIteratorPre = image.NumpyArrayIterator
+    from tensorflow.keras.preprocessing.image import NumpyArrayIterator as NumpyArrayIteratorPre
 
     from tensorflow.keras import backend as K
 
@@ -30,7 +31,7 @@ else:
 
     from keras.callbacks import LearningRateScheduler
 
-    from keras.preprocessing.image import ImageDataGenerator as ImageDataGeneratorOrig, NumpyArrayIterator, array_to_img
+    from keras.preprocessing.image import ImageDataGenerator as ImageDataGeneratorOrig, array_to_img
 
     """ NumpyArrayIterator is inherited from NumpyArrayIteratorPre"""
     from keras.preprocessing.image import image

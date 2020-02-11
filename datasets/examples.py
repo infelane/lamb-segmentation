@@ -6,7 +6,7 @@ def get_10lamb():
 
 
 def get_13zach():
-    d = DataFolder('/scratch/lameeus/data/ghent_altar/input/hierarchy/13_small')
+    d = DataFolder('/home/lameeus/data/ghent_altar/input/hierachy/13_small')
     return d
 
 

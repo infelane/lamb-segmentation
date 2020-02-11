@@ -8,7 +8,7 @@ def main():
     Data (all important modalities)
     """
 
-    folder_windows = r'C:\Users\Laurens_laptop_w\OneDrive - UGent\data\10lamb'
+    # folder_windows = r'C:\Users\Laurens_laptop_w\OneDrive - UGent\data\10lamb'
     x, y =
 
     """

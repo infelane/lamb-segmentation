@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
-def concurrent(imgs, titles=None):
+def concurrent(imgs, titles=None, verbose=1):
     
     if titles is not None:
         assert len(imgs) == len(titles)
@@ -24,7 +24,8 @@ def concurrent(imgs, titles=None):
         if titles is not None:
             plt.title(titles_list[i])
     
-    plt.show()
+    if verbose:
+        plt.show()
     
     
 def _single_process(img):

@@ -1,7 +1,8 @@
 import os
 import numpy as np
 
-from neuralNetwork.import_keras import ImageDataGeneratorOrig, NumpyArrayIterator, NumpyArrayIteratorPre, K, \
+from keras.preprocessing.image import NumpyArrayIterator
+from neuralNetwork.import_keras import ImageDataGeneratorOrig, NumpyArrayIteratorPre, K, \
     array_to_img
 from data.conversion_tools import y2bool_annot
 from data.image_tools import ImgExt
@@ -12,7 +13,8 @@ from keras_preprocessing.image import np as np_random
 
 def get_flow(x, y,
              batch_size=32,
-             w_patch=10
+             w_patch=10,
+             w_ext_in = 0,
              ):
     
     datagen = SegmentationDataGenerator(
@@ -21,27 +23,27 @@ def get_flow(x, y,
         diagonal_flip=True,
     )
 
-    flow = datagen.flow(x, y, y2bool_annot(y), w_in=w_patch,
+    flow = datagen.flow(x, y, y2bool_annot(y), w_in=w_patch + w_ext_in,
                         w_out=w_patch, batch_size=batch_size)
 
     
     return flow
 
 
+
 def get_class_imbalance(flow,
                         n_batches=1000,
                         verbose=1):
-    
     from keras.preprocessing.image import Iterator
     assert isinstance(flow, Iterator)
-
+    
     n_tot = 0
     n_0 = 0
     n_1 = 0
     
     for _ in range(n_batches):
         _, y_i = flow.next()
-
+        
         assert y_i.shape[-1] == 2, 'Not implemented for more than 2 classes'
         
         y_i_0 = y_i[..., 0]
@@ -50,21 +52,38 @@ def get_class_imbalance(flow,
         n_tot += y_i_0.size
         n_0 += y_i_0.sum()
         n_1 += y_i_1.sum()
-      
+    
     f_0 = n_0 / (n_0 + n_1)
     
     # Fraction of class 1, should ideally be 50%
     f_1 = n_1 / (n_0 + n_1)
-
-    class_weight =  (1/2. / f_0 , 1/2. / f_1)
+    
+    f = (f_0, f_1)
     
     if verbose:
+        
+        f_str = ' '.join(f'{f_i:.4f}' for f_i in f)
+        f_pro_str = ' '.join(f'{100*f_i:.2f}%' for f_i in f)
+        
         print('class imbalance:\n'
-              f'\tf_1 = {f_1:.4f} = {100 * f_1:.2f}%\n'
+              f'\tf = ({f_str}) = ({f_pro_str})\n'
               f'\tn_0/n_1: {n_0 / n_1:.2f}')
     
         print(f'fraction annotated = {(n_0 + n_1) / n_tot:.4f} = {100 * (n_0 + n_1) / n_tot:.2f}%')
+    
+    return f
 
+def get_class_weights(flow,
+                      n_batches=1000,
+                      verbose=1):
+    
+    f = get_class_imbalance(flow, n_batches=n_batches, verbose=verbose)
+
+    class_weight = tuple(1./(2*f_i) for f_i in f)
+    
+    assert np.dot(class_weight, f) == 1.
+    
+    if verbose:
         print(f'class weights = {class_weight}')
 
     return class_weight

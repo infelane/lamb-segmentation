@@ -23,6 +23,8 @@ def jaccard_with0(y_true, y_pred, verbose=False):
     
     tp, tn, fp, fn = _tp_tn_fp_fn(y_true, y_pred)
     
+    import tensorflow as tf
+    
     if tp + fp + fn == 0:
         jaccard = 1
     else:
@@ -32,6 +34,20 @@ def jaccard_with0(y_true, y_pred, verbose=False):
         print('jaccard_with0 = {}'.format(K.eval(jaccard)))
     
     return jaccard
+
+
+def kappa(y_true, y_pred, verbose=False):
+    tp, tn, fp, fn = _tp_tn_fp_fn(y_true, y_pred)
+    
+    # if tp + fp + fn == 0:
+    #     jaccard = 1
+    # else:
+    #     jaccard = tp / (tp + fp + fn)
+    #
+    # if verbose:
+    #     print('jaccard_with0 = {}'.format(K.eval(jaccard)))
+    #
+    # return jaccard
 
 
 def _tp_tn_fp_fn(y_true, y_pred):
