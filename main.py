@@ -6,6 +6,7 @@ from data.conversion_tools import annotations2y, y2bool_annot
 from data.modalities import get_mod_set
 from data.preprocessing import img2array, batch2img
 from datasets.examples import get_19hand
+from datasets.training_examples import get_train19_topleft, get_13botleftshuang, get_19SE_shuang
 from methods.basic import Threshholding, local_thresholding
 from plotting import concurrent
 from methods.examples import neuralNet0
@@ -27,13 +28,15 @@ def get_training_data(train_data):
 
 if __name__ == '__main__':
     ### Settings
+
+    dataset_name = '19_hand_SE' # 19_hand_SE
     
     mod = 5    # 'clean'   #'all'; 5 (everything except UVF)
     b_imbalance = True
     
     verbose = 0
 
-    epochs = 40 # was 10
+    epochs = 40 # 40 seems to be right
     b_opt_lr = False # TODO watch out for flag setting
     
     ## amount of filters
@@ -62,12 +65,12 @@ if __name__ == '__main__':
             y_annot_tr, y_annot_te = panel19withoutRightBot(y_annot)
         
             concurrent([a.get('clean'), y_annot, y_annot_tr, y_annot_te],
-                       ['clean', 'annotation', 'train annot', 'test annot'])
-
-    from datasets.training_examples import get_train19_topleft, get_13botleftshuang
+                       ['clean', 'annotation', 'a annot', 'test annot'])
 
     if 0:
         train_data = get_train19_topleft(mod=mod)
+    elif dataset_name == '19_hand_SE':
+        train_data = get_19SE_shuang(mod=mod)
     else:
         train_data = get_13botleftshuang(mod=mod)
 
@@ -146,7 +149,7 @@ if __name__ == '__main__':
         print(f'Optimal expected learning rate: {lr_opt}')
         
         n = neuralNet0(mod=mod, lr=lr_opt, k=k, verbose=verbose, class_weights=class_weight)
-        info = f'ti_unet_k{k}'
+        info = f'{dataset_name}/ti_unet_k{k}'
         if b_imbalance:
             info += '_imbalanced'
         n.train(flow_tr, flow_te, epochs=epochs, verbose=verbose, info=info)

@@ -73,9 +73,9 @@ class NeuralNet(Base):
         
         flow_va = get_flow_xy(validation) if (validation is not None) else None
 
-        folder_checkpoint =  os.path.join('/scratch/lameeus/data/ghent_altar/net_weight/lamb_segmentation', info)
+        folder_checkpoint =  os.path.join('/scratch/lameeus/data/ghent_altar/net_weight', info)
         filepath_checkpoint = os.path.join(folder_checkpoint, 'w_{epoch}.h5')
-        folder_tensorboard = f'/scratch/lameeus/data/ghent_altar/logs/lamb_segmentation/{info}/'
+        folder_tensorboard = os.path.join('/scratch/lameeus/data/ghent_altar/logs/', info)
         
         if not os.path.exists(folder_checkpoint):
             os.makedirs(folder_checkpoint)

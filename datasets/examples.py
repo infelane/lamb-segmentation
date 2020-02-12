@@ -1,7 +1,7 @@
 from .main import DataFolder
 
 def get_10lamb():
-    d = DataFolder('/scratch/lameeus/data/ghent_altar/input/hierarchy/10_lamb/headlowres')
+    d = DataFolder('/home/lameeus/data/ghent_altar/input/hierachy/10_lamb')
     return d
 
 
@@ -11,5 +11,5 @@ def get_13zach():
 
 
 def get_19hand():
-    d = DataFolder('/scratch/lameeus/data/ghent_altar/input/hierarchy/19_small')
+    d = DataFolder('/home/lameeus/data/ghent_altar/input/hierachy/19_small')
     return d

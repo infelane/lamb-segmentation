@@ -44,14 +44,44 @@ def preset_13zachary():
     return i_w_0, i_w_1, i_h_0, i_h_1
 
 
-def get_im(panel_nr=10, modality='rgb', resolution=0, b_plot=True, b_grid=True):
+def preset_19hand_ir():
+    i_w_0 = 33
+    i_w_1 = 46
+    
+    i_h_0 = 89
+    i_h_1 = 98
+
+    return i_w_0, i_w_1, i_h_0, i_h_1
+
+
+def preset_19hand_rgb():
+    i_w_0 = 33//4
+    i_w_1 = 46//4
+    
+    i_h_0 = 89//4
+    i_h_1 = 98//4
+    
+    return i_w_0, i_w_1, i_h_0, i_h_1
+
+
+def preset_19hand_xray():
+    i_w_0 = 33 // 2
+    i_w_1 = 46 // 2
+    
+    i_h_0 = 89 // 2
+    i_h_1 = 98 // 2
+    
+    return i_w_0, i_w_1, i_h_0, i_h_1
+
+
+def get_im(panel_nr=10, modality='rgb', resolution_scale=0, b_plot=True, b_grid=True):
     """
     
     Parameters
     ----------
     panel_nr
     modality
-    resolution:
+    resolution_scale:
         0 if highest possible (17)
     b_plot
 
@@ -62,27 +92,18 @@ def get_im(panel_nr=10, modality='rgb', resolution=0, b_plot=True, b_grid=True):
 
     modality = modality.lower()
 
-    if panel_nr in [10, 13]:
+    if panel_nr in [10, 13, 19]:
         pass
     else:
         raise NotImplementedError()
 
-    if resolution == 0:
+    if resolution_scale == 0:
         f_res = 17
-    elif isinstance(resolution, int):
-        f_res = resolution
+    elif isinstance(resolution_scale, int):
+        f_res = resolution_scale
     else:
         raise NotImplementedError()
-    
-    if modality.lower() == 'rgb':
-        f_mod = f'{panel_nr}MPVISB0001'
-        pass
-    elif modality.lower() == 'ir':
-        f_mod = f'{panel_nr}MCIRPB0001'
-        pass
-    else:
-        raise NotImplementedError()
-    
+        
     if panel_nr == 10 and modality == 'rgb':
         i_w_0, i_w_1, i_h_0, i_h_1 = preset_10lamb_rgb()
 
@@ -91,6 +112,13 @@ def get_im(panel_nr=10, modality='rgb', resolution=0, b_plot=True, b_grid=True):
         
     elif panel_nr == 13:
         i_w_0, i_w_1, i_h_0, i_h_1 = preset_13zachary()
+
+    elif panel_nr == 19 and modality == 'ir':
+        i_w_0, i_w_1, i_h_0, i_h_1 = preset_19hand_ir()
+    elif panel_nr == 19 and modality == 'rgb':
+        i_w_0, i_w_1, i_h_0, i_h_1 = preset_19hand_rgb()
+    elif panel_nr == 19 and modality == 'xray':
+        i_w_0, i_w_1, i_h_0, i_h_1 = preset_19hand_xray()
         
     else:
         raise NotImplementedError()
@@ -98,9 +126,27 @@ def get_im(panel_nr=10, modality='rgb', resolution=0, b_plot=True, b_grid=True):
     i_w_range = np.arange(i_w_0, i_w_1+1)
     i_h_range = np.arange(i_h_0, i_h_1+1)
     
-    # f_url = lambda: f'http://data.closertovaneyck.be/legacy/tiles/{f_mod}//{f_res}/{i_w_i}_{i_h_i}.jpg'
-    if panel_nr == 13 and modality == 'ir':
-        f_url = lambda: f'http://data.closertovaneyck.be/ec2/tiles/00-13-{modality.upper()}-HI-BTL//{f_res}/{i_w_i}_{i_h_i}.jpg'
+    if panel_nr in [13, 19]:
+        if modality == 'ir':
+            f_mod = 'IR-HI-BTL'
+        elif modality == 'rgb':
+            f_mod = 'VIS-MR-BT'
+        elif modality == 'xray':
+            f_mod = 'XR-MR-BTL'
+        else: raise NotImplementedError()
+        f_url = lambda: f'http://data.closertovaneyck.be/ec2/tiles/00-{panel_nr}-{f_mod}//{f_res}/{i_w_i}_{i_h_i}.jpg'
+    else:
+
+        if modality.lower() == 'rgb':
+            f_mod = f'{panel_nr}MPVISB0001'
+            pass
+        elif modality.lower() == 'ir':
+            f_mod = f'{panel_nr}MCIRPB0001'
+            pass
+        else:
+            raise NotImplementedError()
+        
+        f_url = lambda: f'http://data.closertovaneyck.be/legacy/tiles/{f_mod}//{f_res}/{i_w_i}_{i_h_i}.jpg'
     
     im_lst = {}
     for i_w_i in i_w_range:
@@ -108,8 +154,6 @@ def get_im(panel_nr=10, modality='rgb', resolution=0, b_plot=True, b_grid=True):
         print(f'{i_w_i - i_w_0} / {i_w_1-i_w_0}')
         
         for i_h_i in i_h_range:
-        
-            # url = f'http://data.closertovaneyck.be/legacy/tiles/{f_mod}//{f_res}/{i_w_i}_{i_h_i}.jpg'
             url = f_url()
             im = open_url_image(url)
             
