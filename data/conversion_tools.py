@@ -1,6 +1,6 @@
 import numpy as np
 
-from .preprocessing import zero2one
+from .preprocessing import rescale0to1
 
 
 def annotations2y(img_annot_rgb, thresh: float = 1.):
@@ -11,7 +11,7 @@ def annotations2y(img_annot_rgb, thresh: float = 1.):
     
     assert thresh >= 0 and thresh <= 1, f'thresh has to be in [0, 1]: {thresh}'
     
-    img_rescale = zero2one(img_annot_rgb)
+    img_rescale = rescale0to1(img_annot_rgb)
     
     r0 = np.greater_equal(1 - thresh, img_rescale[:, :, 0])
     r1 = np.greater_equal(img_rescale[:, :, 0], thresh)
@@ -36,3 +36,44 @@ def y2bool_annot(y):
         return [y2bool_annot(y_i) for y_i in y]
     else:
         return np.any(y, axis=-1)
+
+
+def img2array(img):
+    
+    if isinstance(img, list):
+        return np.concatenate([img2array(img_i) for img_i in img], axis=-1)
+    else:
+        try:
+            img_array = np.array(img)
+        except:
+            raise AssertionError(f'Should be image type: {type(img)}')
+
+        if len(img_array.shape) == 2:
+            return img_array.reshape(img_array.shape + (1, ))
+        else:
+            return img_array
+
+
+def img2batch(x):
+    
+    assert (2 <= len(x.shape) <= 4), x.shape
+    
+    if len(x.shape) == 2:
+        return x.reshape((1,) + x.shape + (1,))
+    elif len(x.shape) == 3:
+        return x.reshape((1,) + x.shape)
+    else:
+        return x
+
+
+def batch2img(x):
+    
+    assert (len(x.shape) <= 4), x.shape
+    
+    if len(x.shape) == 4:
+    
+        assert x.shape[0] == 1, x.shape
+        
+        return x.reshape(x.shape[1:])
+    else:
+        return x
