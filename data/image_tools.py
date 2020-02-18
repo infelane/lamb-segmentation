@@ -83,6 +83,9 @@ class ImgExt(object):
 
 class DataInference(object):
     def __init__(self, img, w=10):
+        assert isinstance(img, np.ndarray), f'img should be of type np.ndarray. type(img) = {type(img)}'
+        assert isinstance(w, int), f'w should be of type int. type(w) = {type(w)}'
+        
         self.shape = np.shape(img)
         
         assert len(self.shape) <= 3
