@@ -28,6 +28,21 @@ def get_10lamb_all(mod):
     return train_data
 
 
+def get_10lamb_6patches(mod):
+    df = get_10lamb()
+
+    mod_set = get_mod_set(mod)
+    x_img = img2array(df.get(mod_set))
+    
+    from datasets.shared_methods import DataFolder
+    df_kfold_annot = DataFolder('/home/lameeus/data/ghent_altar/input/hierachy/10_lamb/annotations/kfold')
+
+    lst_names = [f'annot_{i+1}' for i in range(6)]
+    y_img_lst = list(map(annotations2y, df_kfold_annot.get(lst_names)))
+    
+    return KFoldTrainData(x_img, y_img_lst)
+
+
 def get_13botleftshuang(mod, n_per_class = 80, debug=False):
     """
     John the evangelist see Journal 2020 S. Huang
@@ -118,7 +133,7 @@ def get_train19_topleft(mod):
     return train_data
 
 
-def get_19SE_shuang(mod, n_per_class = 80, debug=True):
+def get_19SE_shuang(mod, n_per_class = 80, debug=False):
     """
     John the evangelist see Journal 2020 S. Huang
     :param mod:
@@ -130,7 +145,6 @@ def get_19SE_shuang(mod, n_per_class = 80, debug=True):
 
     mod_set = get_mod_set(mod)
 
-    # TODO rename to img_x
     img_x = img2array(df.get(mod_set))
     _, img_y = panel19withoutRightBot(annotations2y(df.get('annot')))
     
@@ -192,3 +206,26 @@ def _split_train_n_per_class(y_img, n_per_class):
     assert np.count_nonzero(y_img) == np.count_nonzero(y_img_tr) + np.count_nonzero(y_img_te)
 
     return y_img_tr, y_img_te
+
+
+class KFoldTrainData(object):
+    def __init__(self, x_img:np.ndarray, y_img_lst:list):
+
+        assert isinstance(x_img, np.ndarray)
+        assert all(isinstance(y_img_i, np.ndarray) for y_img_i in y_img_lst)
+        
+        self.x_img = x_img
+        self.y_img_lst = y_img_lst
+
+        self.n = len(y_img_lst)
+    def k_split_i(self, i:int):
+        assert isinstance(i, int)
+        assert 0 <= i < self.n, f'i should be in range [0, {self.n}-1]. i = {i}'
+
+        y_te = self.y_img_lst[i]
+        y_tr_lst = self.y_img_lst[:i] + self.y_img_lst[i+1:]
+        
+        y_tr = np.any(y_tr_lst, axis=0)
+
+        train_data = TrainData(self.x_img, y_tr, y_te)
+        return train_data
