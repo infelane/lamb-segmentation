@@ -228,6 +228,4 @@ if __name__ == '__main__':
     """
     Test environment
     """
-
     im = get_im(panel_nr=10, modality='ir', b_grid=False)
-    # save_im('/scratch/lameeus/data/ghent_altar/input/hierarchy/10_lamb/headlowres/toscale/ir_web.png', im, check_duplicate=True)

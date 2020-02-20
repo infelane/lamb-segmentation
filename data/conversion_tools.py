@@ -39,19 +39,26 @@ def y2bool_annot(y):
 
 
 def img2array(img):
+    """
+    Convert image to numpy array with 3th dimension to being able to work with colour channels.
+    :param img:
+    :return: np.ndarray
+    """
     
     if isinstance(img, list):
         return np.concatenate([img2array(img_i) for img_i in img], axis=-1)
     else:
-        try:
-            img_array = np.array(img)
-        except:
-            raise AssertionError(f'Should be image type: {type(img)}')
+        if not isinstance(img, np.ndarray):
+            try:
+                img = np.asarray(img)
+            except Exception as e:
+                print(e)
+                raise AssertionError(f'Should be image type: {type(img)}')
 
-        if len(img_array.shape) == 2:
-            return img_array.reshape(img_array.shape + (1, ))
+        if len(img.shape) == 2:
+            return img.reshape(img.shape + (1, ))
         else:
-            return img_array
+            return img
 
 
 def img2batch(x):

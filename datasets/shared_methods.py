@@ -1,10 +1,8 @@
 import os
 
-
-import numpy as np
-from PIL import Image
-
+from data.datatools import imread
 from plotting import concurrent
+
 
 class Data(dict):
     _imgs = {}
@@ -54,8 +52,8 @@ class DataFolder(Data):
             root, ext = os.path.splitext(file)
             if ext.lower() in ['.png', '.tif', '.jpg']:
                 path = os.path.join(folder, file)
-
-                img = Image.open(path)
+                
+                img = imread(path)
 
                 self._imgs[root] = img
 

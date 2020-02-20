@@ -2,15 +2,13 @@ import numpy as np
 
 
 def rescale0to1(x):
-    x_array = np.asarray(x)
+    x_rescaled = np.empty(shape=x.shape, dtype=np.float32)  # float16 is annoying to plot...
     
-    x_rescaled = np.empty(shape=x_array.shape, dtype=np.float16)
-    
-    if x_array.max() > 255:
-        x_rescaled[...] = x_array/65535.
-    elif x_array.max() > 1:
-        x_rescaled[...] = x_array/255.
+    if x.max() > 255:
+        x_rescaled[...] = x/65535.
+    elif x.max() > 1:
+        x_rescaled[...] = x/255.
     else:
-        x_rescaled[...] = x_array.copy()
+        x_rescaled[...] = x.copy()
         
     return x_rescaled

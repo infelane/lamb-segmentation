@@ -3,9 +3,8 @@ import numpy as np
 from .training import TrainData
 
 from data.example_splits import panel19withoutRightBot, panel13withoutRightBot
-from data.conversion_tools import annotations2y
+from data.conversion_tools import annotations2y, img2array
 from data.modalities import get_mod_set
-from data.preprocessing import img2array
 from datasets.examples import get_19hand, get_13zach, get_10lamb
 
 
@@ -16,23 +15,15 @@ def get_10lamb_all(mod):
     :return:
     """
     
-    df = get_10lamb()
-
-    mod_set = get_mod_set(mod)
-    x_img = img2array(df.get(mod_set))
-
-    y_img = annotations2y(df.get('annot'))
-
-    train_data = TrainData(x_img, y_img, y_img)
+    img_x, img_y = xy_from_df(get_10lamb(), mod)
+    
+    train_data = TrainData(img_x, img_y, img_y)
 
     return train_data
 
 
 def get_10lamb_6patches(mod):
-    df = get_10lamb()
-
-    mod_set = get_mod_set(mod)
-    x_img = img2array(df.get(mod_set))
+    img_x = x_from_df(get_10lamb(), mod)
     
     from datasets.shared_methods import DataFolder
     df_kfold_annot = DataFolder('/home/lameeus/data/ghent_altar/input/hierachy/10_lamb/annotations/kfold')
@@ -40,7 +31,7 @@ def get_10lamb_6patches(mod):
     lst_names = [f'annot_{i+1}' for i in range(6)]
     y_img_lst = list(map(annotations2y, df_kfold_annot.get(lst_names)))
     
-    return KFoldTrainData(x_img, y_img_lst)
+    return KFoldTrainData(img_x, y_img_lst)
 
 
 def get_13botleftshuang(mod, n_per_class = 80, debug=False):
@@ -51,26 +42,20 @@ def get_13botleftshuang(mod, n_per_class = 80, debug=False):
     :return:
     """
     # TODO n_per_class according to the paper is 40...
-
-    df = get_13zach()
-
-    mod_set = get_mod_set(mod)
     
-    x_img = img2array(df.get(mod_set))
-
-    y_img = annotations2y(df.get('annot'))
+    img_x, img_y = xy_from_df(get_13zach(), mod)
     
-    _, y_img2 = panel13withoutRightBot(y_img)
+    _, img_y_2 = panel13withoutRightBot(img_y)
 
-    shape = x_img.shape[:2]
+    shape = img_x.shape[:2]
     idx = np.mgrid[:shape[0], :shape[1]]
     
     # Should be transposed
     idx2 = np.transpose(idx, (1, 2, 0))
     idx_flat = idx2.reshape((-1, 2))
     
-    b_flat0 = y_img2[..., 0].flatten().astype(bool)
-    b_flat1 = y_img2[..., 1].flatten().astype(bool)
+    b_flat0 = img_y_2[..., 0].flatten().astype(bool)
+    b_flat1 = img_y_2[..., 1].flatten().astype(bool)
     
     def shuffle(arr):
         arr_shuffle = np.copy(arr)
@@ -93,11 +78,11 @@ def get_13botleftshuang(mod, n_per_class = 80, debug=False):
     for i, j in idx1:
         b_tr[i, j] = True
 
-    y_tr = np.zeros(y_img2.shape)
-    y_te = np.zeros(y_img2.shape)
+    y_tr = np.zeros(img_y_2.shape)
+    y_te = np.zeros(img_y_2.shape)
 
-    y_tr[b_tr, :] = y_img2[b_tr, :]
-    y_te[~b_tr, :] = y_img2[~b_tr, :]
+    y_tr[b_tr, :] = img_y_2[b_tr, :]
+    y_te[~b_tr, :] = img_y_2[~b_tr, :]
    
     if debug:
         import matplotlib.pyplot as plt
@@ -107,9 +92,9 @@ def get_13botleftshuang(mod, n_per_class = 80, debug=False):
     # More like double checking:
     assert (np.count_nonzero(y_tr[..., 0]), np.count_nonzero(y_tr[..., 1])) == (n_per_class, n_per_class)
 
-    assert np.count_nonzero(y_img2) == np.count_nonzero(y_tr) + np.count_nonzero(y_te)
+    assert np.count_nonzero(img_y_2) == np.count_nonzero(y_tr) + np.count_nonzero(y_te)
 
-    train_data = TrainData(x_img, y_tr, y_te)
+    train_data = TrainData(img_x, y_tr, y_te)
 
     return train_data
 
@@ -119,16 +104,11 @@ def get_train19_topleft(mod):
     Excluded
     """
     
-    a = get_19hand()
+    img_x, img_y = xy_from_df(get_19hand(), mod)
     
-    mod_set = get_mod_set(mod)
-    x_img = img2array(a.get(mod_set))
+    y_tr, y_te = panel19withoutRightBot(img_y)
     
-    y_img = annotations2y(a.get('annot'))
-    
-    y_tr, y_te = panel19withoutRightBot(y_img)
-    
-    train_data = TrainData(x_img, y_tr, y_te)
+    train_data = TrainData(img_x, y_tr, y_te)
     
     return train_data
 
@@ -140,13 +120,9 @@ def get_19SE_shuang(mod, n_per_class = 80, debug=False):
     :param n_per_class:
     :return:
     """
-
-    df = get_19hand()
-
-    mod_set = get_mod_set(mod)
-
-    img_x = img2array(df.get(mod_set))
-    _, img_y = panel19withoutRightBot(annotations2y(df.get('annot')))
+    
+    img_x, img_y_full = xy_from_df(get_19hand(), mod)
+    _, img_y = panel19withoutRightBot(img_y_full)
     
     img_y_tr, img_y_te = _split_train_n_per_class(img_y, n_per_class)
 
@@ -160,19 +136,32 @@ def get_19SE_shuang(mod, n_per_class = 80, debug=False):
     return train_data
 
 
-def _split_train_n_per_class(y_img, n_per_class):
+def xy_from_df(df, mod):
+    img_x = x_from_df(df, mod)
+    img_y = annotations2y(df.get('annot'))
     
-    assert len(y_img.shape) == 3
+    return img_x, img_y
+
+
+def x_from_df(df, mod):
+    mod_set = get_mod_set(mod)
+    img_x = np.concatenate(list(map(img2array, df.get(mod_set))), axis=-1)
+    return img_x
     
-    shape = y_img.shape[:2]
+    
+def _split_train_n_per_class(img_y, n_per_class):
+    
+    assert len(img_y.shape) == 3
+    
+    shape = img_y.shape[:2]
     
     idx1 = np.mgrid[:shape[0], :shape[1]]
     # Should be transposed
     idx2 = np.transpose(idx1, (1, 2, 0))
     idx_flat = idx2.reshape((-1, 2))
 
-    b_flat0 = y_img[..., 0].flatten().astype(bool)
-    b_flat1 = y_img[..., 1].flatten().astype(bool)
+    b_flat0 = img_y[..., 0].flatten().astype(bool)
+    b_flat1 = img_y[..., 1].flatten().astype(bool)
     
     def _shuffle(arr):
         # always the same shuffle!
@@ -194,18 +183,18 @@ def _split_train_n_per_class(y_img, n_per_class):
     for i, j in idx1:
         b_tr[i, j] = True
     
-    y_img_tr = np.zeros(y_img.shape)
-    y_img_te = np.zeros(y_img.shape)
+    img_y_tr = np.zeros(img_y.shape)
+    img_y_te = np.zeros(img_y.shape)
 
-    y_img_tr[b_tr, :] = y_img[b_tr, :]
-    y_img_te[~b_tr, :] = y_img[~b_tr, :]
+    img_y_tr[b_tr, :] = img_y[b_tr, :]
+    img_y_te[~b_tr, :] = img_y[~b_tr, :]
     
     # More like double checking:
-    assert (np.count_nonzero(y_img_tr[..., 0]), np.count_nonzero(y_img_tr[..., 1])) == (n_per_class, n_per_class)
+    assert (np.count_nonzero(img_y_tr[..., 0]), np.count_nonzero(img_y_tr[..., 1])) == (n_per_class, n_per_class)
 
-    assert np.count_nonzero(y_img) == np.count_nonzero(y_img_tr) + np.count_nonzero(y_img_te)
+    assert np.count_nonzero(img_y) == np.count_nonzero(img_y_tr) + np.count_nonzero(img_y_te)
 
-    return y_img_tr, y_img_te
+    return img_y_tr, img_y_te
 
 
 class KFoldTrainData(object):
@@ -218,8 +207,9 @@ class KFoldTrainData(object):
         self.y_img_lst = y_img_lst
 
         self.n = len(y_img_lst)
+        
     def k_split_i(self, i:int):
-        assert isinstance(i, int)
+        assert isinstance(i, (int, np.int_))
         assert 0 <= i < self.n, f'i should be in range [0, {self.n}-1]. i = {i}'
 
         y_te = self.y_img_lst[i]
@@ -228,4 +218,11 @@ class KFoldTrainData(object):
         y_tr = np.any(y_tr_lst, axis=0)
 
         train_data = TrainData(self.x_img, y_tr, y_te)
+        return train_data
+    
+    def get_train_data_all(self):
+        
+        y_all = np.any(self.y_img_lst, axis=0)
+        
+        train_data = TrainData(self.x_img, y_all, np.zeros(y_all.shape, dtype=y_all.dtype))
         return train_data

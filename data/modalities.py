@@ -23,6 +23,26 @@ def get_mod_set(mod_name):
         NotImplementedError(f'{mod_name}')
 
 
+def get_mod_n_in(mod_name):
+    _modality_exist(mod_name)
+    
+    if mod_name == 'all':
+        return 12
+    elif mod_name == 'clean':
+        return 3
+    else:
+        try:
+            if int(mod_name) == 5:
+                return 9
+            else:
+                NotImplementedError(f'{mod_name}')
+        except ValueError as verr:
+            pass
+            NotImplementedError(f'{mod_name}')
+        
+        NotImplementedError(f'{mod_name}')
+
+
 def _modality_exist(mod):
     
     assert str(mod) in modalities_set_names, (mod, modalities_set_names)
