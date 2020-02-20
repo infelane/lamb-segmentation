@@ -2,17 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from data.example_splits import panel19withoutRightBot
-from data.conversion_tools import annotations2y, y2bool_annot
+from data.conversion_tools import annotations2y, y2bool_annot, img2array, batch2img
 from data.modalities import get_mod_set
-from data.preprocessing import img2array, batch2img
 from datasets.examples import get_19hand
-from datasets.training_examples import get_train19_topleft, get_13botleftshuang, get_19SE_shuang
+from datasets.default_trainingsets import get_train19_topleft, get_13botleftshuang, get_19SE_shuang
 from methods.basic import Threshholding, local_thresholding
 from plotting import concurrent
 from methods.examples import neuralNet0
 from neuralNetwork.optimization import find_learning_rate
-from performance.testing import test, filter_non_zero, get_y_pred_thresh
-from preprocessing.image import get_class_weights, get_class_imbalance
+from performance.testing import optimal_test_thresh, filter_non_zero, get_y_pred_thresh
+from preprocessing.image import get_class_weights, get_class_imbalance, get_flow
 
 
 def get_training_data(train_data):
@@ -80,8 +79,6 @@ if __name__ == '__main__':
 
     x, y_tr, x_te, y_te = get_training_data(train_data)
 
-    from preprocessing.image import get_flow
-
     # To get w_ext
     w_ext = neuralNet0(mod=mod, k=1, verbose=1).w_ext
 
@@ -137,7 +134,7 @@ if __name__ == '__main__':
         if b_opt_lr:
             ### Finding optimal lr
 
-            lr_opt = find_learning_rate(n.get_model(), flow_tr, class_weight, verbose=verbose)
+            lr_opt = find_learning_rate(n.get_model(), flow_tr, class_weight=class_weight, verbose=verbose)
         else:
     
             lr_opt = 1e-0   # Fully connected
@@ -176,7 +173,7 @@ if __name__ == '__main__':
         ### Evaluation
 
         if 1:
-            test_thresh = test(y_pred, y_tr, y_te, verbose=verbose, d_thresh=.01 )
+            test_thresh = optimal_test_thresh(y_pred, y_tr, y_te, verbose=verbose, d_thresh=.01)
         else:
             test_thresh = .96
             

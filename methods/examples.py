@@ -6,9 +6,11 @@ import tensorflow as tf
 
 from .basic import NeuralNet
 
+from keras.losses import mse
+
 from neuralNetwork.import_keras import SGD, categorical_crossentropy, Adam, Nadam
-from neuralNetwork.architectures import fullyConnected1x1, convNet, unet, ti_unet
-from data.modalities import _modality_exist
+from neuralNetwork.architectures import fullyConnected1x1, convNet, unet, ti_unet, autoencoder
+from data.modalities import get_mod_n_in
 
 from performance.metrics import accuracy_with0, jaccard_with0
 
@@ -25,13 +27,24 @@ def compile0(model, lr=1e-1, class_weights=(1, 1)):
     else: loss = weighted_categorical_crossentropy(class_weights)
     
     model.compile(optimizer, loss=loss, metrics=metrics)
+    
+    
+def compile_ae(model, lr=0.002):
+    optimizer = Nadam(lr)
+
+    metrics = [mse]
+    
+    loss = categorical_crossentropy
+    
+    model.compile(optimizer, loss=loss, metrics=metrics)
 
 
 def neuralNet0(mod, lr=None, k=20, verbose=1, class_weights=None):
     
     batch_norm = True
     
-    _modality_exist(mod)
+    n_in = get_mod_n_in(mod)
+    
     if mod == 'all':
         n_in = 12
     elif mod == 'clean':
@@ -69,6 +82,22 @@ def neuralNet0(mod, lr=None, k=20, verbose=1, class_weights=None):
 
     n = NeuralNet(model, w_ext=w_ext)
 
+    return n
+
+
+def get_neural_net_ae(mod, k=None, w_in=None, b_double=True, b_split_mod=False):
+    
+    n_in = get_mod_n_in(mod)
+    
+    model = autoencoder(n_in, k, w_in=w_in, b_double=b_double, b_split_modality=b_split_mod)
+    
+    model.summary()
+    
+    args = {}
+    compile_ae(model, **args)
+    
+    n = NeuralNet(model, w_ext=28)
+    
     return n
 
 

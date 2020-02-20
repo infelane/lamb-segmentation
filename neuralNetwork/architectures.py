@@ -2,7 +2,7 @@
 # from neuralNetwork.import_keras.keras_general.models import Model
 
 from neuralNetwork.import_keras import Input, Conv2D, BatchNormalization, Activation, Model
-from keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D
+from keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D, UpSampling2D, Lambda, concatenate
 # from tensorflow.keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D
 
 def fullyConnected1x1(n_in, k=1, w_in=None, batch_norm=False):
@@ -333,6 +333,104 @@ def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, 
     assert w_out_diff == 0, f'diff_in_out should be {diff_in_out[max_depth] + w_out_diff} instead of {diff_in_out[max_depth]}'
     
     model = Model(inputs, outputs)
+    return model
+
+
+def autoencoder(features_in, k=None, w_in=None, w_ext=28, b_double=True, padding='valid', b_split_modality=False):
+    """
+    Difference
+    :param features_in:
+    :param k:
+    :param w_in:
+    :param b_double:
+    :param padding:
+    :return:
+    """
+    
+    if k is None:
+        k = features_in
+
+    if w_in is not None:
+        shape = (w_in+w_ext, w_in+w_ext, features_in)
+    else:
+        shape = (None, None, features_in)
+
+    inputs = Input(shape=shape)
+    
+    assert features_in == 9
+    
+    def split(inputs, i_start, i_end):
+        return Lambda(lambda x : x[..., i_start:i_end])(inputs)
+    
+    def encoder(inputs):
+
+        # Encoder
+        l = Conv2D(k, (3, 3), activation='elu', padding=padding)(inputs)
+        
+        l = MaxPooling2D(2)(l)
+        
+        f = 2**1 *k if b_double else k
+        l = Conv2D(f, (3, 3), activation='elu', padding=padding)(l)
+        
+        l = MaxPooling2D(2)(l)
+        
+        return l
+        
+        f = 2**2 *k if b_double else k
+        encoder_out = Conv2D(f, (3, 3), activation='elu', padding=padding, name='encoder_output')(l)
+        
+        return encoder_out
+    
+    if b_split_modality:
+        input_clean = encoder(split(inputs, 0, 3))
+        input_rgb = encoder(split(inputs, 3, 6))
+        input_ir = encoder(split(inputs, 6, 7))
+        input_irr = encoder(split(inputs, 7, 8))
+        input_xray = encoder(split(inputs, 8, 9))
+
+        l_enc = concatenate([input_clean, input_rgb, input_ir, input_irr, input_xray], axis=-1)
+    else:
+        l_enc = encoder(inputs)
+        
+    f = 2**2 *k if b_double else k
+    encoder_out = Conv2D(f, (3, 3), activation='elu', padding=padding, name='encoder_output')(l_enc)
+        
+        # encoder_out = encoder(inputs)
+
+    # Decoder
+    
+    def decoder(encoder_out, f_out=features_in):
+    
+        f = 2**1 *k if b_double else k
+        l = Conv2D(f, (3, 3), activation='elu', padding=padding)(encoder_out)
+        
+        l = UpSampling2D(2)(l)
+        
+        f = 2**0 *k if b_double else k
+        l = Conv2D(f, (3, 3), activation='elu', padding=padding)(l)
+        
+        l = UpSampling2D(2)(l)
+        
+        outputs = Conv2D(f_out, (3, 3), activation='sigmoid', padding=padding)(l)
+        
+        return outputs
+    
+    if b_split_modality:
+        output_clean = decoder(encoder_out, 3)
+        output_rgb = decoder(encoder_out, 3)
+        output_ir = decoder(encoder_out, 1)
+        output_irr = decoder(encoder_out, 1)
+        output_xray = decoder(encoder_out, 1)
+
+        outputs = concatenate([output_clean, output_rgb, output_ir, output_irr, output_xray], axis=-1)
+    else:
+        outputs = decoder(encoder_out)
+    
+    if w_in is not None:
+        assert outputs._shape_tuple()[1:3] == (w_in, w_in)
+
+    model = Model(inputs=inputs, outputs=outputs)
+    
     return model
 
 
