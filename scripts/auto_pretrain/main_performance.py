@@ -31,7 +31,7 @@ def main():
     
     ### Settings
     
-    k_range = np.arange(1, 30+1).astype(int)
+    k_range = np.arange(2, 30+1).astype(int)
     # k_range = [10,11]
 
     fold_range = np.arange(6).astype(int)
@@ -142,8 +142,8 @@ def main():
             df_single = pd.DataFrame(lst_data_single)
             df_avg_pred = pd.DataFrame(lst_data_avg_pred)
             
-            path_single = os.path.join(folder_save, filename_single)
-            path_avg_pred = os.path.join(folder_save, filename_avg_pred)
+            path_single = os.path.join(folder_save, filename_single + '.csv')
+            path_avg_pred = os.path.join(folder_save, filename_avg_pred + '.csv')
             if os.path.exists(path_single):
                 df_single.to_csv(path_single, mode='a', header=False, index=False)
             else:
