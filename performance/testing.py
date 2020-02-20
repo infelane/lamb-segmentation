@@ -1,15 +1,16 @@
+from math import ceil
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import accuracy_score, jaccard_similarity_score, cohen_kappa_score
 
-from data.preprocessing import batch2img
+from data.conversion_tools import batch2img
 from performance.metrics import accuracy_with0, jaccard_with0
 from neuralNetwork.import_keras import K
 
 
-def test(y_pred, y_tr, y_te, verbose=1, d_thresh = .1, thresh0=0, thresh1=1):
+def optimal_test_thresh(y_pred, y_tr, y_te, verbose=1, d_thresh = .1, thresh0=0, thresh1=1):
     """
     
     :param y_pred:
@@ -74,13 +75,57 @@ def test(y_pred, y_tr, y_te, verbose=1, d_thresh = .1, thresh0=0, thresh1=1):
     return te_thresh
 
 
-def test_incremental(y_pred, y_tr, y_te, n, verbose=0, thresh0=0, thresh1=1, n_incr=10):
+def optimal_test_thresh_equal_distribution(y_true, y_pred, mask_true=True):
+    """
+    
+    :param y_true: Ground truth (GT) to get distribution from
+    :param y_pred: prediction to match distribution to
+    :param mask_true: take subset of prediction that is included in GT
+    :return:
+    """
+
+    assert y_true.shape[-1] == y_pred.shape[-1] == 2
+    
+    from data.conversion_tools import y2bool_annot
+    
+    def _get_distribution(y):
+    
+        list_n = np.sum(y, axis=tuple(np.arange(len(y.shape) - 1)))
+        
+        list_p = list_n/np.sum(list_n)
+
+        return list_p
+
+    p_true = _get_distribution(y_true)
+    print('p_true:', p_true)
+
+    ### Find threshold to match distribution
+    y_pred1 = y_pred[y2bool_annot(y_true), 1] if mask_true else  y_pred[..., 1]
+    n_pred = np.size(y_pred1)
+    y_pred1_sorted = np.sort(y_pred1.flatten())
+    i_thresh = ceil((1-p_true[1])*n_pred)
+
+    thresh = y_pred1_sorted[i_thresh]
+    
+    y_pred1_thresholded = np.greater_equal(y_pred1, thresh)
+    y_pred_thresholded = np.stack([1-y_pred1_thresholded, y_pred1_thresholded], axis=-1)
+    
+    # Assertion?
+    p_pred_thresholded = _get_distribution(y_pred_thresholded)
+    
+    print('p_pred_thresholded:', p_pred_thresholded)
+    
+    # Inclusive
+    return thresh
+
+
+def test_thresh_incremental(y_pred, y_tr, y_te, n, verbose=0, thresh0=0, thresh1=1, n_incr=10):
     
     assert n_incr >= 3
     
     for _ in range(n):
         d_thresh = (thresh1 - thresh0) / float(n_incr)
-        test_thresh = test(y_pred, y_tr, y_te, verbose=verbose, d_thresh=d_thresh, thresh0=thresh0, thresh1=thresh1)
+        test_thresh = optimal_test_thresh(y_pred, y_tr, y_te, verbose=verbose, d_thresh=d_thresh, thresh0=thresh0, thresh1=thresh1)
         
         thresh0 = test_thresh - d_thresh
         thresh1 = test_thresh + d_thresh
@@ -89,10 +134,10 @@ def test_incremental(y_pred, y_tr, y_te, n, verbose=0, thresh0=0, thresh1=1, n_i
 
 
 def filter_non_zero(y_true, y_pred):
-    b_nonzero = y_true.sum(axis=-1).astype(bool)
+    b_nonzero = np.any(y_true, axis=-1)
 
-    y_true_filter = y_true[b_nonzero, :]
-    y_pred_filter = y_pred[b_nonzero, :]
+    y_true_filter = y_true[b_nonzero, ...]
+    y_pred_filter = y_pred[b_nonzero, ...]
 
     return y_true_filter, y_pred_filter
 

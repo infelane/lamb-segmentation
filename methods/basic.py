@@ -9,7 +9,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 # from tensorflow.keras.preprocessing.image import NumpyArrayIterator
 # from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 
-from data.preprocessing import batch2img
+from data.conversion_tools import batch2img
 from neuralNetwork.results import inference
 from preprocessing.image import get_flow
 
@@ -39,11 +39,14 @@ class NeuralNet(Base):
         self.model = model
         
         self.w_ext = w_ext
-    
-    def method(self, x_img):
-        return inference(self.model, x_img, w_ext=self.w_ext)
         
-    def train(self, xy, validation=None, epochs=20, verbose=1, info='scratch'):
+    def predict(self, x_img, w=None):
+        return self.method(x_img, w=w)
+    
+    def method(self, x_img, w=None):
+        return inference(self.model, x_img, w=w, w_ext=self.w_ext)
+        
+    def train(self, xy, validation=None, epochs=1, verbose=1, info='scratch'):
         """
         
         :param xy: Can be either tuple of (x, y) or Keras Generator
