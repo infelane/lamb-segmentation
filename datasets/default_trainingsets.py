@@ -5,7 +5,7 @@ from .training import TrainData
 from data.example_splits import panel19withoutRightBot, panel13withoutRightBot
 from data.conversion_tools import annotations2y, img2array
 from data.modalities import get_mod_set
-from datasets.examples import get_19hand, get_13zach, get_10lamb
+from datasets.examples import get_19hand, get_13zach, get_10lamb, get_10lamb_kfold
 
 
 def get_10lamb_all(mod):
@@ -26,7 +26,7 @@ def get_10lamb_6patches(mod):
     img_x = x_from_df(get_10lamb(), mod)
     
     from datasets.shared_methods import DataFolder
-    df_kfold_annot = DataFolder('/home/lameeus/data/ghent_altar/input/hierachy/10_lamb/annotations/kfold')
+    df_kfold_annot = get_10lamb_kfold()
 
     lst_names = [f'annot_{i+1}' for i in range(6)]
     y_img_lst = list(map(annotations2y, df_kfold_annot.get(lst_names)))

@@ -37,13 +37,19 @@ def main():
     fold_range = np.arange(6).astype(int)
     # fold_range = [0, 1]
     
-    # epoch_range = np.arange(1, 40+1).astype(int)
-    epoch_range = [39, 40]
-    
-    folder_save = '/home/lameeus/data/ghent_altar/dataframes'
+    epoch_range = np.arange(1, 40+1).astype(int)
+    # epoch_range = [39, 40]
+
     filename_single = f'tiunet_10lamb_kfold_single'
     filename_avg_pred =f'tiunet_10lamb_kfold_avgpred'
-    
+
+    if os.name == 'nt':     # windows laptop
+        folder_weights = 'C:/Users/Laurens_laptop_w/data'
+        folder_save = 'C:/Users/Laurens_laptop_w/data/ghent_altar/dataframes'
+    else:
+        folder_weights = '/scratch/lameeus/data/ghent_altar/net_weight'
+        folder_save = '/home/lameeus/data/ghent_altar/dataframes'
+
     ### Init
     epoch_range_desc = np.sort(epoch_range)[::-1]
 
@@ -73,7 +79,7 @@ def main():
                 """
                 Load model
                 """
-                filepath_model = f'/scratch/lameeus/data/ghent_altar/net_weight/10lamb_kfold/ti_unet_k{k}_kfold{i_fold}/w_{epoch}.h5'
+                filepath_model = os.path.join(folder_weights, f'10lamb_kfold/ti_unet_k{k}_kfold{i_fold}/w_{epoch}.h5')
 
                 if epoch == epoch_range_desc[0]:
                     model = load_model(filepath_model, custom_objects={'loss': loss,
@@ -160,17 +166,6 @@ def foo_performance(y_true, y_pred, thresh):
     """
     
     assert y_true.shape[-1] == y_pred.shape[-1] == 2
-
-    def foo_performance(y_true, y_pred, thresh):
-        # is basically argmax
-        y_pred_thresh_arg = np.greater_equal(y_pred[..., 1], thresh)
-    
-        y_true_flat, y_pred_thresh_arg_flat = filter_non_zero(y_true, y_pred_thresh_arg)
-        y_te_argmax = np.argmax(y_true_flat, axis=-1)
-    
-        # Kappa
-        return _get_scores(y_te_argmax, y_pred_thresh_arg_flat)[-1]
-    
     
     """
     to indexing
