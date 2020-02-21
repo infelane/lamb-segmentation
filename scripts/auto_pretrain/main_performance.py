@@ -31,13 +31,13 @@ def main():
     
     ### Settings
     
-    k_range = np.arange(2, 30 + 1).astype(int)
+    k_range = range(2, 30 + 1)
     # k_range = [10,11]
 
-    fold_range = np.arange(6).astype(int)
+    fold_range = range(6)
     # fold_range = [0, 1]
 
-    epoch_range = np.arange(1, 40 + 1).astype(int)
+    epoch_range = range(1, 40 + 1)
     # epoch_range = [39, 40]
 
     filename_single = f'tiunet_10lamb_kfold_single'
@@ -59,9 +59,7 @@ def main():
     img_x = rescale0to1(img_x)
     img_y_all = train_data_all.get_y_train()
     
-    ###
-    lst_data_single = []
-    lst_data_avg_pred = []
+
     
     for k in k_range:
         for i_fold in fold_range:
@@ -73,6 +71,10 @@ def main():
             train_data_i = k_fold_train_data.k_split_i(i_fold)
             img_y_tr = train_data_i.get_y_train()
             img_y_te = train_data_i.get_y_test()
+
+            ###
+            lst_data_single = []
+            lst_data_avg_pred = []
             
             for epoch in epoch_range_desc:
     
@@ -82,16 +84,10 @@ def main():
                 filepath_model = os.path.join(folder_weights, f'10lamb_kfold/ti_unet_k{k}_kfold{i_fold}/w_{epoch}.h5')
 
                 if epoch == epoch_range_desc[0]:
-                    model = load_model(filepath_model, custom_objects={'loss': loss,
-                                                                       'accuracy_with0': accuracy_with0,
-                                                                       'jaccard_with0': jaccard_with0,
-                                                                       'kappa_loss': kappa_loss
-                                                                       })
-
+                    assert model is None
                     assert len(list_y_pred) == 0
-                    
-                else:
-                    model.load_weights(filepath_model)
+
+                model = load_model_quick(filepath_model, model)
 
                 """
                 Inference
@@ -123,7 +119,8 @@ def main():
                                  'epoch': epoch}
                 data_avg_pred_i = {'k': k,
                                    'i_fold': i_fold,
-                                   'epoch_start': epoch}
+                                   'epoch_start': epoch,
+                                   'epoch_end': epoch_range_desc[0]}
                 
                 data_single_i.update(foo_performance(img_y_te, y_pred, thresh_single))
                 data_avg_pred_i.update(foo_performance(img_y_te, y_avg_pred, thresh_avg_pred))
@@ -155,6 +152,20 @@ def main():
                 df_avg_pred.to_csv(path_avg_pred, index=False)
     
     return
+
+
+def load_model_quick(filepath_model, model=None):
+    if model is None:
+        model = load_model(filepath_model, custom_objects={'loss': loss,
+                                                           'accuracy_with0': accuracy_with0,
+                                                           'jaccard_with0': jaccard_with0,
+                                                           'kappa_loss': kappa_loss
+                                                           })
+
+    else:
+        model.load_weights(filepath_model)
+    
+    return model
 
     
 def foo_performance(y_true, y_pred, thresh):
