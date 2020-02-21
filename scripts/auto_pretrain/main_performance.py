@@ -31,13 +31,13 @@ def main():
     
     ### Settings
     
-    k_range = np.arange(2, 30+1).astype(int)
+    k_range = np.arange(2, 30 + 1).astype(int)
     # k_range = [10,11]
 
     fold_range = np.arange(6).astype(int)
     # fold_range = [0, 1]
-    
-    epoch_range = np.arange(1, 40+1).astype(int)
+
+    epoch_range = np.arange(1, 40 + 1).astype(int)
     # epoch_range = [39, 40]
 
     filename_single = f'tiunet_10lamb_kfold_single'
