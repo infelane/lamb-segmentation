@@ -48,6 +48,7 @@ class Data(dict):
 class DataFolder(Data):
     def __init__(self, folder):
 
+        # TODO only read image on the spot (less memory intensive)
         for file in os.listdir(folder):
             root, ext = os.path.splitext(file)
             if ext.lower() in ['.png', '.tif', '.jpg']:

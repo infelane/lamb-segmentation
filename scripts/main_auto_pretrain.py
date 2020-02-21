@@ -1,9 +1,11 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from keras.models import load_model, Model
 
-from data.conversion_tools import img2array, batch2img
+from data.conversion_tools import img2array, batch2img, img2batch
 from data.preprocessing import rescale0to1
 from datasets.default_trainingsets import get_10lamb_all, get_10lamb_6patches
 from main_general import get_training_data
@@ -86,65 +88,228 @@ def main():
         2) fix encoder
     """
     
-    if 0:
-        epoch_w = 10
+    if 1:
         
-        n = get_neural_net_ae(mod, k)
-        model_ae = n.model
-        path_weights = f'/scratch/lameeus/data/ghent_altar/net_weight/autoencoder/k{k}/w_{epoch_w}.h5'
-        model_ae.load_weights(path_weights)
-        
-        if 0:
-            # Test prediction
-            n0 = NeuralNet(model_ae)
-            y0 = n0.predict(img_x, w=w_patch)
-            concurrent([_undo_norm_input(y0)[..., :3]], ['clean'])
-
-        encoder_inputs = model_ae.input
-        encoder_outputs = model_ae.get_layer('encoder_output').output
-        
-        model_encoder = Model(encoder_inputs, encoder_outputs)
-        model_encoder.summary()
-        
-        # make untrainable
-        for layer in model_encoder.layers:
-            layer.trainable = False
-
-        model_encoder.summary()
-
-        from keras.layers import Conv2D, UpSampling2D
-        
-        l = Conv2D(9*2, (3, 3), activation='elu', padding='same')(encoder_outputs)
-        l = UpSampling2D(2)(l)
-        l = Conv2D(9*1, (3, 3), activation='elu', padding='same')(l)
-        l = UpSampling2D(2)(l)
-        segm_output = Conv2D(2, (3, 3), activation='softmax', padding='same')(l)
-        
-        model_segm = Model(encoder_inputs, segm_output)
-        model_segm.summary()
-        
-        from methods.examples import compile0
-        compile0(model_segm, lr=1e-3)
-
-        n_segm = NeuralNet(model_segm)
-
-        flow_segm = get_flow(img_x, img_y_tr,
-                           w_patch=w_patch,
-                           w_ext_in=0
-                           )
-
-        n_segm.train(flow_segm, info='segm_aepretrain', epochs=10)
-
-        # TODO ae_flow_test (just split image in half, or like in 4 squares and 2/4 is train, 2/4 test.
-
-        y_segm = n_segm.predict(img_x, w=w_patch*10)
+        if 1:
+            b_encoder_fixed = False
     
-        concurrent([_undo_norm_input(img_x[..., :3]), y_segm[..., 1], img_y_tr[..., 0], img_y_tr[..., 1]])
+            info_enc_fixed = '_enc_fixed' if b_encoder_fixed else ''
+            get_info = lambda: f'10lamb_kfold_pretrained{info_enc_fixed}/unet_enc_k{k}_ifold{i_fold}'
         
+            n_epochs = 40
+            
+            k = 10
+            
+            if k == 10:
+                epoch_w = 100
+            else:
+                raise NotImplementedError()
+
+            ### Settings you don't have to change:
+
+            w_patch = 50
+            w_ext_in = 28
+            b_double = False
+            padding = 'valid'
+
+            
+            def get_model_encoder():
+                """
+                
+                :return:
+                """
+
+                """
+                Take the auto-encoder
+                """
+
+                n = get_neural_net_ae(mod, k,
+                                      w_in=w_patch,
+                                      b_double=False, b_split_mod=False
+                                      )
+                model_ae = n.model
+
+                sub_folder = f'k{k}'  # No doubling, no modsplit
+
+                path_weights = os.path.join('/scratch/lameeus/data/ghent_altar/net_weight/autoencoder_v2', sub_folder,
+                                            f'w_{epoch_w}.h5')
+                model_ae.load_weights(path_weights)
+
+                # Check if ok
+                img_x_ae = n.predict(img_x)
+                mse = (np.square(img_x_ae - img_x)).mean()
+                if mse >= .1: print('autoencoder is probably shitty trained!')
+    
+                """
+                Get the encoder
+                """
+                
+                encoder_inputs = model_ae.input
+                encoder_outputs = model_ae.get_layer('encoder_output').output
+    
+                model_encoder = Model(encoder_inputs, encoder_outputs)
+                if 0: model_encoder.summary()
+    
+                if b_encoder_fixed:
+                    # make untrainable
+                    for layer in model_encoder.layers:
+                        layer.trainable = False
+            
+                return model_encoder
+             
+            """
+            Construct decoder
+            """
+
+            from keras.layers import Conv2D, UpSampling2D, Concatenate, Cropping2D
+            def decoder(model_encoder, f_out):
+                
+                encoder_outputs = model_encoder.output
+        
+                f = 2 ** 1 * k if b_double else k
+                l = Conv2D(f, (3, 3), activation='elu', padding=padding)(encoder_outputs)
+    
+                l = UpSampling2D(2)(l)
+                # Combine
+                l_left_crop = Cropping2D(4)(model_encoder._layers_by_depth[2][0].output)
+                l = Concatenate()([l, l_left_crop])
+    
+                f = 2 ** 0 * k if b_double else k
+                l = Conv2D(f, (3, 3), activation='elu', padding=padding)(l)
+    
+                l = UpSampling2D(2)(l)
+                
+                l_left_crop = Cropping2D(12)(model_encoder._layers_by_depth[4][0].output)
+                l = Concatenate()([l, l_left_crop])
+    
+                outputs = Conv2D(f_out, (3, 3), activation='sigmoid', padding=padding)(l)
+    
+                return outputs
+            
+            # TODO flag for converting encoder to dilated conv
+            
+            def get_unet_pretrained_encoder():
+    
+                model_encoder = get_model_encoder()
+
+                encoder_inputs = model_encoder.input
+                
+                decoder_outputs = decoder(model_encoder, f_out=2)
+    
+                model_pretrained_unet = Model(encoder_inputs, decoder_outputs)
+                from methods.examples import compile0
+                compile0(model_pretrained_unet, lr=1e-3)
+
+                model_pretrained_unet.summary()
+                
+                return model_pretrained_unet
+                
+            """
+            Train
+            """
+        
+            k_fold_train_data = get_10lamb_6patches(5)
+            for i_fold in range(6):
+                
+                """
+                Get a new network (not trained yet for segmentation)
+                """
+                
+                model_pretrained_unet = get_unet_pretrained_encoder()
+                n_pretrained_unet = NeuralNet(model_pretrained_unet)
+    
+                """
+                The data
+                """
+    
+                train_data_i = k_fold_train_data.k_split_i(i_fold)
+
+                info = get_info()
+
+                img_y_tr = train_data_i.get_y_train()
+                img_y_te = train_data_i.get_y_test()
+    
+                flow_tr = get_flow(img_x, img_y_tr,
+                                   w_patch=w_patch,  # Comes from 10
+                                   w_ext_in=w_ext_in
+                                   )
+    
+                flow_te = get_flow(img_x, img_y_te,
+                                   w_patch=w_patch,  # Comes from 10
+                                   w_ext_in=w_ext_in
+                                   )
+
+                n_pretrained_unet.train(flow_tr, flow_te, epochs=n_epochs, verbose=1, info=info)
+            
+                """
+                Prediction
+                """
+    
+                n_pretrained_unet.w_ext = w_ext_in
+                y_pred = n_pretrained_unet.predict(img_x)
+                
+                concurrent([y_pred[..., 1]])
+            
+        if 0:
+        
+            epoch_w = 10
+            
+            n = get_neural_net_ae(mod, k)
+            model_ae = n.model
+            path_weights = f'/scratch/lameeus/data/ghent_altar/net_weight/autoencoder/k{k}/w_{epoch_w}.h5'
+            model_ae.load_weights(path_weights)
+            
+            if 0:
+                # Test prediction
+                n0 = NeuralNet(model_ae)
+                y0 = n0.predict(img_x, w=w_patch)
+                concurrent([_undo_norm_input(y0)[..., :3]], ['clean'])
+    
+            encoder_inputs = model_ae.input
+            encoder_outputs = model_ae.get_layer('encoder_output').output
+            
+            model_encoder = Model(encoder_inputs, encoder_outputs)
+            model_encoder.summary()
+            
+            # make untrainable
+            for layer in model_encoder.layers:
+                layer.trainable = False
+    
+            model_encoder.summary()
+    
+            from keras.layers import Conv2D, UpSampling2D
+            
+            l = Conv2D(9*2, (3, 3), activation='elu', padding='same')(encoder_outputs)
+            l = UpSampling2D(2)(l)
+            l = Conv2D(9*1, (3, 3), activation='elu', padding='same')(l)
+            l = UpSampling2D(2)(l)
+            segm_output = Conv2D(2, (3, 3), activation='softmax', padding='same')(l)
+            
+            model_segm = Model(encoder_inputs, segm_output)
+            model_segm.summary()
+            
+            from methods.examples import compile0
+            compile0(model_segm, lr=1e-3)
+    
+            n_segm = NeuralNet(model_segm)
+    
+            flow_segm = get_flow(img_x, img_y_tr,
+                               w_patch=w_patch,
+                               w_ext_in=0
+                               )
+    
+            n_segm.train(flow_segm, info='segm_aepretrain', epochs=10)
+    
+            # TODO ae_flow_test (just split image in half, or like in 4 squares and 2/4 is train, 2/4 test.
+    
+            y_segm = n_segm.predict(img_x, w=w_patch*10)
+        
+            concurrent([_undo_norm_input(img_x[..., :3]), y_segm[..., 1], img_y_tr[..., 0], img_y_tr[..., 1]])
+            
     """
         3) without pretraining
     """
-    if 1:
+    if 0:
         ### Settings
         
         k_min, k_max = 9, 30
