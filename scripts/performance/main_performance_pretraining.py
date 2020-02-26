@@ -17,7 +17,7 @@ from plotting import concurrent
 # from performance.metrics import accuracy_with0, jaccard_with0
 # loss = weighted_categorical_crossentropy((1, 1))
 
-from scripts.auto_pretrain.main_performance import load_model_quick, foo_performance
+from scripts.performance.main_performance import load_model_quick, foo_performance
 
 
 def main():
