@@ -185,7 +185,10 @@ def unet(features_in, w=10, ext_in=0, filters=2, max_depth=1):
 
 def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, double=False,
             n_per_block=1,
-            batch_norm=False):
+            features_out = 2,
+            batch_norm=False,
+            wrong_batch_norm=False):
+    # TODO remove wrong_batch_norm
     """
     Builds up the original U-Net that is Translation Equivariant
     :param features_in:
@@ -228,10 +231,11 @@ def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, 
 
             lefti = l_prev
             for i_per_block in range(n_per_block):
-                lefti = _gen_conv(f, act=act, dr=dr, name=f'left{depth}_{i_per_block}')(lefti)
+                lefti = _gen_conv(f, act=act, dr=dr, name=f'left{depth}_{i_per_block}',
+                                  batch_norm=wrong_batch_norm)(lefti)
                 
                 if batch_norm:
-                    lefti = BatchNormalization(name=f'batchnorm_left{depth}')(lefti)
+                    lefti = BatchNormalization(name=f'batchnorm_left{depth}_{i_per_block}')(lefti)
                 
             return lefti
         
@@ -249,7 +253,8 @@ def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, 
             
             righti = l_prev
             for i_per_block in range(n_per_block):
-                righti = _gen_conv(f, act=act, dr=dr, name=f'right{depth}_{i_per_block}')(righti)
+                righti = _gen_conv(f, act=act, dr=dr, name=f'right{depth}_{i_per_block}',
+                                   batch_norm=wrong_batch_norm)(righti)
                 if batch_norm:
                     righti = BatchNormalization(name=f'batchnorm_right{depth}')(righti)
             return righti
@@ -326,7 +331,7 @@ def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, 
         # 0.1 should be low
         l_last = Dropout(rate=0.1, noise_shape=(tf.shape(right_lst[0])[0], w, w, filters))(right_lst[0])
         
-    outputs = Conv2D(filters=2, kernel_size=(1, 1), activation='softmax', name='fcc')(l_last)
+    outputs = Conv2D(filters=features_out, kernel_size=(1, 1), activation='softmax', name='fcc')(l_last)
     
     assert outputs._shape_tuple()[-3] == outputs._shape_tuple()[-2], outputs._shape_tuple()
     w_out_diff = w - outputs._shape_tuple()[-2]
@@ -336,7 +341,8 @@ def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, 
     return model
 
 
-def autoencoder(features_in, k=None, w_in=None, w_ext=28, b_double=True, padding='valid', b_split_modality=False):
+def autoencoder(features_in, k=None, w_in=None, w_ext=None, depth = 2, b_double=True, padding='valid', b_split_modality=False,
+                batch_norm = False):
     """
     Difference
     :param features_in:
@@ -346,6 +352,9 @@ def autoencoder(features_in, k=None, w_in=None, w_ext=28, b_double=True, padding
     :param padding:
     :return:
     """
+    assert depth >= 0
+    if w_ext is None:
+        w_ext = [4, 12, 28][depth]
     
     if k is None:
         k = features_in
@@ -363,24 +372,21 @@ def autoencoder(features_in, k=None, w_in=None, w_ext=28, b_double=True, padding
         return Lambda(lambda x : x[..., i_start:i_end])(inputs)
     
     def encoder(inputs):
-
         # Encoder
-        l = Conv2D(k, (3, 3), activation='elu', padding=padding)(inputs)
         
-        l = MaxPooling2D(2)(l)
+        l = inputs
+        for i_d in range(depth):
         
-        f = 2**1 *k if b_double else k
-        l = Conv2D(f, (3, 3), activation='elu', padding=padding)(l)
-        
-        l = MaxPooling2D(2)(l)
+            f = 2**i_d *k if b_double else k
+            
+            l = Conv2D(f, (3, 3), activation='elu', padding=padding, name=f'enc{i_d}')(l)
+            if batch_norm:
+                l = BatchNormalization(name=f'batchnorm_enc{i_d}')(l)
+            
+            l = MaxPooling2D(2)(l)
         
         return l
         
-        f = 2**2 *k if b_double else k
-        encoder_out = Conv2D(f, (3, 3), activation='elu', padding=padding, name='encoder_output')(l)
-        
-        return encoder_out
-    
     if b_split_modality:
         input_clean = encoder(split(inputs, 0, 3))
         input_rgb = encoder(split(inputs, 3, 6))
@@ -394,24 +400,24 @@ def autoencoder(features_in, k=None, w_in=None, w_ext=28, b_double=True, padding
         
     f = 2**2 *k if b_double else k
     encoder_out = Conv2D(f, (3, 3), activation='elu', padding=padding, name='encoder_output')(l_enc)
-        
-        # encoder_out = encoder(inputs)
+    if batch_norm:
+        encoder_out = BatchNormalization(name=f'batchnorm_enc_output')(encoder_out)
 
     # Decoder
     
     def decoder(encoder_out, f_out=features_in):
-    
-        f = 2**1 *k if b_double else k
-        l = Conv2D(f, (3, 3), activation='elu', padding=padding)(encoder_out)
         
-        l = UpSampling2D(2)(l)
+        l = encoder_out
+        for i_d in range(depth)[::-1]:
+            f = 2**i_d *k if b_double else k
+            l = Conv2D(f, (3, 3), activation='elu', padding=padding, name=f'dec{i_d}')(l)
+            if batch_norm:
+                l = BatchNormalization(name=f'batchnorm_dec{i_d}')(l)
         
-        f = 2**0 *k if b_double else k
-        l = Conv2D(f, (3, 3), activation='elu', padding=padding)(l)
+            l = UpSampling2D(2)(l)
         
-        l = UpSampling2D(2)(l)
-        
-        outputs = Conv2D(f_out, (3, 3), activation='sigmoid', padding=padding)(l)
+        outputs = Conv2D(f_out, (3, 3), activation='sigmoid', padding=padding,
+                         name='decoder_output')(l)
         
         return outputs
     
@@ -450,7 +456,7 @@ def _conv_batch_norm(filters,
     return foo
 
 
-def _gen_conv(filters, act='elu', name=None, dr=1, batch_norm=True):
+def _gen_conv(filters, act='elu', name=None, dr=1, batch_norm=False):
     """
     
     :param filters:

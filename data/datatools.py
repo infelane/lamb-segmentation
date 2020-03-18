@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from PIL import Image
-
+from data.postprocessing import img_to_uint8
 
 def imread(path):
     im = np.array(Image.open(path))
@@ -19,7 +19,10 @@ def imsave(path, array, b_check_duplicate=True):
                 print(f'Not saved: {path}')
                 return
 
-    Image.fromarray(array).save(path)
+    im = Image.fromarray(img_to_uint8(array))
+    if im.mode == 'F':
+        im = im.convert('L')
+    im.save(path)
     return
 
 
@@ -40,5 +43,8 @@ def pandas_save(path, df, append=False, overwrite=False, index = False, sep=';',
             return -1
     
     else:
+        directory = os.path.dirname(path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         columns = df.columns
         df.to_csv(path, index=index, columns=columns, sep=sep, *args, **kwargs)

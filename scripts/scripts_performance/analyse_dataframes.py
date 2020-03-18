@@ -4,36 +4,74 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+import tikzplotlib
+
 
 class Main(object):
-    def __init__(self):
-        folder = '/home/lameeus/data/ghent_altar/dataframes/'
-        file = 'pretrained_unet_10lamb_kfold_single.csv'
+    def __init__(self,
+                 batchnorm=True,
+                 depth = 1,
+                 ti = True,
+                 fixed:int = 0,
+                 ):
         
+        settings = {'batchnorm':batchnorm,
+                    'depth':depth,
+                    'ti':ti,
+                    'fixed':fixed
+                    }
+        print(settings)
+        
+        folder = '/home/lameeus/data/ghent_altar/dataframes/'
+        
+        info_batchnorm = '_batchnorm' if batchnorm else ''
+        info_net = 'tiunet' if ti else 'unet'
+        info_fixed = '_encfixed' if fixed == 1 else '_prefixed' if fixed == 2 else ''
+        
+        if 0:
+            file_pre = f'pretrained_{info_net}{info_batchnorm}_d{depth}_10lamb_kfold_v2_single.csv'
+        elif 1:
+            file_pre = f'pretrained/{info_net}_10lamb_kfold{info_fixed}{info_batchnorm}/d{depth}_single.csv'
+            
         file2 = 'tiunet_10lamb_kfold_single.csv'
         
-        df_unet_pretrained_fixed = pd.read_csv(os.path.join(folder, file), sep=';')
+        df_pretrained = pd.read_csv(os.path.join(folder, file_pre), sep=';')
         df_tiunet_single = pd.read_csv(os.path.join(folder, file2), sep=',')
         df_tiunet_single = remove_duplicates(df_tiunet_single)
+        if 0:
+            df_tiunet_avg = pd.read_csv(os.path.join(folder, 'tiunet_10lamb_kfold_avgpred.csv'), sep=',')
+            df_tiunet_avg = remove_duplicates(df_tiunet_avg)
+        
+        def filter_epoch(df, epoch_start):
+            return df[df.epoch >= epoch_start]
 
-        df_tiunet_avg = pd.read_csv(os.path.join(folder, 'tiunet_10lamb_kfold_avgpred.csv'), sep=',')
-        df_tiunet_avg = remove_duplicates(df_tiunet_avg)
+        # Starting at 40: i_fold 6 only starts to converge after that it seems
+        if fixed <= 1:
+            df_pretrained_filter = filter_epoch(df_pretrained, 40)
+        else:
+            df_pretrained_filter = filter_epoch(df_pretrained, 40)  # Still wait at least for convergence...
+        df_tiunet_single_filter = filter_epoch(df_tiunet_single, 20)
 
         if 0:
             self.correlation_jaccard_kappa(df_tiunet_single)
         
         # Very nice graph to illustrate performance in terms of k and epoch
-        if 0:
+    
+        def foo(df):
             # ['median', 'mean']. Median is best
             for mode in ['median']:
                 # ['jaccard', 'kappa']  # Both OK, but jaccard is easier to understand
                 for y in ['jaccard']:
                     for x in ['k', 'epoch']:
-                        self.plot_shaded_line(df_tiunet_single, x=x, y=y, mode=mode)
+                        self.plot_shaded_line(df, x=x, y=y, mode=mode)
                         
-                        self.plot_shaded_line(df_tiunet_single, x=x, y=y, mode=mode, b_folds=False)
+                        self.plot_shaded_line(df, x=x, y=y, mode=mode, b_folds=False)
                  
-            self.plot2d(df_tiunet_single)
+            self.plot2d(df)
+        if 1:
+            foo(df_pretrained_filter)
+            foo(df_tiunet_single_filter)
+        
         else:
             # ['median', 'mean']. Median is best
             for mode in ['median']:
@@ -105,6 +143,14 @@ class Main(object):
                                        epoch_start=epoch_start,
                                        verbose=1
                                        )
+
+            """
+            Pretrained
+            """
+            self.estimated_performance(df_pretrained_filter,
+                                        k_start = 10,
+                                        epoch_start = 40,
+                                        verbose = 1)
             
             
     def correlation_jaccard_kappa(self, df):
@@ -195,12 +241,15 @@ class Main(object):
     def estimated_performance(self, df, metric='jaccard',
                               epoch_start = 21,
                               k_start = 10,
+                              k_end = None,
                               verbose=1):
         
         filter1 = (df.epoch >= epoch_start) if 'epoch' in df.keys() else\
             (df.epoch_start == epoch_start)
         df_sub = df[filter1 & (df.k >= k_start)]
-        
+        if k_end is not None:
+            df_sub = df_sub[df.k <= k_end]
+            
         perf_fold = df_sub.groupby('i_fold')[metric].median()
         
         if verbose:

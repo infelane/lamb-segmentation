@@ -8,7 +8,7 @@ from keras.models import load_model, Model
 
 from data.conversion_tools import img2array, batch2img
 from data.preprocessing import rescale0to1
-from datasets.default_trainingsets import get_10lamb_all, get_10lamb_6patches
+from datasets.default_trainingsets import get_10lamb_old, get_10lamb_6patches
 from main_general import get_training_data
 from methods.examples import get_neural_net_ae, neuralNet0
 from methods.basic import NeuralNet

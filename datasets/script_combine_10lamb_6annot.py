@@ -16,7 +16,7 @@ def combine_annot(b_save=True):
     folder_annots = '/home/lameeus/data/ghent_altar/input/hierachy/10_lamb/annotations/lameeus'
     folder_save = '/home/lameeus/data/ghent_altar/input/hierachy/10_lamb/annotations/kfold'
 
-    lst_get = [get_borders1, get_borders2, get_borders3, get_borders4, get_borders5, get_borders6]
+
     
     # Clean image
     im_clean = imread('/home/lameeus/data/ghent_altar/input/hierachy/10_lamb/clean.png')

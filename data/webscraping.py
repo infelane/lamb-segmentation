@@ -34,12 +34,26 @@ def preset_10lamb_ir():
     return i_w_0, i_w_1, i_h_0, i_h_1
 
 
-def preset_13zachary():
+def preset_13zachary(mod = None):
     i_w_0 = 58
     i_w_1 = 76
     
     i_h_0 = 7
     i_h_1 = 34
+
+    if mod == 'irr':
+        i_w_0 = 14
+        i_w_1 = 18
+
+        i_h_0 = 1
+        i_h_1 = 8
+        
+    elif mod == 'xray':
+        i_w_0 = 28
+        i_w_1 = 38
+
+        i_h_0 = 3
+        i_h_1 = 18
 
     return i_w_0, i_w_1, i_h_0, i_h_1
 
@@ -109,10 +123,10 @@ def get_im(panel_nr=10, modality='rgb', resolution_scale=0, b_plot=True, b_grid=
 
     elif panel_nr == 10 and modality == 'ir':
         i_w_0, i_w_1, i_h_0, i_h_1 = preset_10lamb_ir()
+    
+    if panel_nr == 13:
+        i_w_0, i_w_1, i_h_0, i_h_1 = preset_13zachary(modality)
         
-    elif panel_nr == 13:
-        i_w_0, i_w_1, i_h_0, i_h_1 = preset_13zachary()
-
     elif panel_nr == 19 and modality == 'ir':
         i_w_0, i_w_1, i_h_0, i_h_1 = preset_19hand_ir()
     elif panel_nr == 19 and modality == 'rgb':
@@ -133,6 +147,8 @@ def get_im(panel_nr=10, modality='rgb', resolution_scale=0, b_plot=True, b_grid=
             f_mod = 'VIS-MR-BT'
         elif modality == 'xray':
             f_mod = 'XR-MR-BTL'
+        elif modality == 'irr':
+            f_mod = 'IRR-MR-BTL'
         else: raise NotImplementedError()
         f_url = lambda: f'http://data.closertovaneyck.be/ec2/tiles/00-{panel_nr}-{f_mod}//{f_res}/{i_w_i}_{i_h_i}.jpg'
     else:

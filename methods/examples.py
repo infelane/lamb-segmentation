@@ -6,8 +6,7 @@ import tensorflow as tf
 
 from .basic import NeuralNet
 
-from keras.losses import mse
-
+from keras.losses import mse, binary_crossentropy
 from neuralNetwork.import_keras import SGD, categorical_crossentropy, Adam, Nadam
 from neuralNetwork.architectures import fullyConnected1x1, convNet, unet, ti_unet, autoencoder
 from data.modalities import get_mod_n_in
@@ -15,7 +14,7 @@ from data.modalities import get_mod_n_in
 from performance.metrics import accuracy_with0, jaccard_with0
 
 
-def compile0(model, lr=1e-1, class_weights=(1, 1)):
+def compile_segm(model, lr=1e-4, class_weights=(1, 1)):
     
     # optimizer = SGD(lr)
     # optimizer = Adam(lr)
@@ -34,30 +33,17 @@ def compile_ae(model, lr=0.002):
 
     metrics = [mse]
     
-    loss = categorical_crossentropy
+    loss = binary_crossentropy  # THIS SHOULD NOT HAVE WORKED! categorical_crossentropy
     
     model.compile(optimizer, loss=loss, metrics=metrics)
 
 
-def neuralNet0(mod, lr=None, k=20, verbose=1, class_weights=None):
-    
-    batch_norm = True
-    
+def neuralNet0(mod, lr=None, k=20, verbose=1, class_weights=None,
+               batch_norm=True
+               ):
+
     n_in = get_mod_n_in(mod)
     
-    if mod == 'all':
-        n_in = 12
-    elif mod == 'clean':
-        n_in = 3
-    else:
-        try:
-            if int(mod) == 5:
-                n_in = 9
-            else: NotImplementedError()
-        except ValueError as verr:
-            pass
-            NotImplementedError()
-        
     if 0:
         model = fullyConnected1x1(n_in, k=k, batch_norm=batch_norm)
         w_ext = 0
@@ -78,25 +64,32 @@ def neuralNet0(mod, lr=None, k=20, verbose=1, class_weights=None):
     if lr is not None: args['lr'] = lr
     if class_weights is not None: args['class_weights'] = class_weights
     
-    compile0(model, **args)
+    compile_segm(model, **args)
 
     n = NeuralNet(model, w_ext=w_ext)
 
     return n
 
 
-def get_neural_net_ae(mod, k=None, w_in=None, b_double=True, b_split_mod=False):
+def get_neural_net_ae(mod, k=None, lr=None, w_in=None, depth=2, b_double=True, b_split_mod=False,
+                      batch_norm = False,
+                      verbose=1):
     
     n_in = get_mod_n_in(mod)
     
-    model = autoencoder(n_in, k, w_in=w_in, b_double=b_double, b_split_modality=b_split_mod)
+    model = autoencoder(n_in, k, w_in=w_in, depth=depth, b_double=b_double, b_split_modality=b_split_mod,
+                        batch_norm = batch_norm)
     
-    model.summary()
+    if verbose:
+        model.summary()
     
     args = {}
+    if lr is not None:
+        args['lr'] = lr
     compile_ae(model, **args)
     
-    n = NeuralNet(model, w_ext=28)
+    w_ext = 28 if depth == 2 else 12 if depth == 1 else -1  # To implement
+    n = NeuralNet(model, w_ext=w_ext)
     
     return n
 

@@ -4,10 +4,11 @@ import pandas as pd
 from .import_keras import *
 
 
-def find_learning_rate(model, training_data, class_weight=None, verbose=1):
+def find_learning_rate(model, training_data, class_weight=None, verbose=1,
+                       lr0=1e-5,
+                       lr1 = 1e+5,
+                       ):
     
-    lr0 = 1e-5
-    lr1 = 1e+5
     n = 20
 
     lr_range = [lr0 * (lr1/lr0)**(i/n) for i in range(n+1)]

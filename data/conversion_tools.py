@@ -29,6 +29,32 @@ def annotations2y(img_annot_rgb, thresh: float = 1.):
     return img_class
 
 
+def detect_colour(y, colour, thresh: float = 1.):
+    
+    img_rescale = rescale0to1(y)
+    
+    r0 = np.greater_equal(1 - thresh, img_rescale[:, :, 0])
+    r1 = np.greater_equal(img_rescale[:, :, 0], thresh)
+    g0 = np.greater_equal(1 - thresh, img_rescale[:, :, 1])
+    g1 = np.greater_equal(img_rescale[:, :, 1], thresh)
+    b0 = np.greater_equal(1 - thresh, img_rescale[:, :, 2])
+    b1 = np.greater_equal(img_rescale[:, :, 2], thresh)
+    
+    if colour == 'red':
+        red = r1 * g0 * b0
+        return red
+    
+    elif colour == 'blue':
+        blue = r0 * g0 * b1
+        return blue
+    
+    elif colour == 'cyan':
+        cyan = r0 * g1 * b1
+        return cyan
+    
+    else: raise ValueError(colour)
+
+
 def y2bool_annot(y):
     
     # List of annotated images

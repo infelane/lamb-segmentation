@@ -8,7 +8,7 @@ from data.modalities import get_mod_set
 from datasets.examples import get_19hand, get_13zach, get_10lamb, get_10lamb_kfold
 
 
-def get_10lamb_all(mod):
+def get_10lamb_old(mod):
     """
     Face of the lamb on panel 10
     :param mod:
@@ -32,6 +32,20 @@ def get_10lamb_6patches(mod):
     y_img_lst = list(map(annotations2y, df_kfold_annot.get(lst_names)))
     
     return KFoldTrainData(img_x, y_img_lst)
+
+
+def get_13(mod, debug=False):
+    """
+    Prophet Zachary
+    :param mod:
+    :return:
+    """
+
+    img_x, img_y = xy_from_df(get_13zach(), mod)
+
+    train_data = TrainData(img_x, img_y, np.zeros(shape=img_y.shape))
+
+    return train_data
 
 
 def get_13botleftshuang(mod, n_per_class = 80, debug=False):

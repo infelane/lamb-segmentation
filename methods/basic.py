@@ -35,10 +35,17 @@ class Threshholding(Base):
     
 
 class NeuralNet(Base):
+    epoch=0
     def __init__(self, model, w_ext=0):
+        
+        
         self.model = model
         
         self.w_ext = w_ext
+        
+    def load(self, folder, epoch):
+        self.model.load_weights(os.path.join(folder, f'w_{epoch}.h5'))
+        self.epoch = epoch
         
     def predict(self, x_img, w=None):
         return self.method(x_img, w=w)
@@ -84,12 +91,16 @@ class NeuralNet(Base):
             os.makedirs(folder_checkpoint)
             
         checkpoint = ModelCheckpoint(filepath_checkpoint, save_weights_only=False)
-        tensorboard = TensorBoard(folder_tensorboard)
+        # Only save the graph if it's first epoch training the model
+        tensorboard = TensorBoard(folder_tensorboard, write_graph=self.epoch==0)
         callbacks = [checkpoint, tensorboard]
         
-        self.get_model().fit_generator(flow_tr, steps_per_epoch=steps_per_epoch,
+        self.get_model().fit_generator(flow_tr,
+                                       initial_epoch=self.epoch, epochs=self.epoch+epochs,
+                                       steps_per_epoch=steps_per_epoch,
                                        validation_data=flow_va, validation_steps=steps_per_epoch//10,
-                                       epochs=epochs, verbose=verbose, callbacks=callbacks)
+                                       verbose=verbose, callbacks=callbacks)
+        self.epoch += epochs
         
     def get_model(self):
         return self.model

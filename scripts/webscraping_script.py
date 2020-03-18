@@ -6,25 +6,30 @@ from data.webscraping import get_im
 
 
 if __name__ == '__main__':
-    modality = 'ir'
-    modality = 'rgb'    # rgb before cleaning
+    # modality = 'ir'
+    # modality = 'rgb'    # rgb before cleaning
     modality = 'xray'
+    # modality = 'irr'
+
+    panel_nr = 13
+    
+    resolution_scale = 15
     
     if modality == 'ir':
         if 0:
             panel_nr = 13
             resolution_scale = 17  # 17
-        
-        panel_nr = 19
+
         resolution_scale = 16
     elif modality == 'rgb':
-        panel_nr = 19
         resolution_scale = 14
         
     elif modality == 'xray':
-        panel_nr = 19
         resolution_scale = 15
-    
+        
+    if (modality == 'xray') & (panel_nr == 13): resolution_scale = 16
+    if (modality == 'irr') & (panel_nr == 13): resolution_scale = 16
+        
     im = get_im(panel_nr=panel_nr, resolution_scale=resolution_scale, modality=modality, b_grid=True)
 
     if 0:

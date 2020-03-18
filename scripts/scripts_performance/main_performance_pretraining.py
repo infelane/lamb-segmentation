@@ -6,7 +6,7 @@ import pandas as pd
 
 from data.datatools import pandas_save
 from data.preprocessing import rescale0to1
-from datasets.default_trainingsets import get_10lamb_all, get_10lamb_6patches
+from datasets.default_trainingsets import get_10lamb_old, get_10lamb_6patches
 from figures_paper.overlay import semi_transparant
 from methods.basic import NeuralNet
 from performance.testing import optimal_test_thresh_equal_distribution, test_thresh_incremental, _get_scores, filter_non_zero
@@ -17,7 +17,7 @@ from plotting import concurrent
 # from performance.metrics import accuracy_with0, jaccard_with0
 # loss = weighted_categorical_crossentropy((1, 1))
 
-from scripts.performance.main_performance import load_model_quick, foo_performance
+from scripts.scripts_performance.main_performance import load_model_quick, foo_performance
 
 
 def main():
@@ -49,7 +49,6 @@ def main():
     img_y_all = train_data_all.get_y_train()
     
     b_plot = False
-
 
     for i_fold in fold_range:
     
