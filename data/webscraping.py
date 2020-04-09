@@ -172,8 +172,7 @@ def get_im(panel_nr=10, modality='rgb', resolution_scale=0, b_plot=True, b_grid=
         for i_h_i in i_h_range:
             url = f_url()
             im = open_url_image(url)
-            
-        
+
             h_i, w_i = im.shape[:2]
         
             im_lst[(i_w_i, i_h_i)] = [(h_i, w_i), im]

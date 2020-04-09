@@ -25,7 +25,6 @@ from methods.examples import compile_segm
 from scripts.scripts_performance.main_performance import foo_performance
 
 
-
 class MainPretrain(object):
     
     fixed_enc = True
@@ -51,7 +50,9 @@ class MainPretrain(object):
             self.w_ext_in_ae = 12
             self.w_ext_in_ti = 10
             
-    def __init__(self, k=None, depth=None,
+    def __init__(self,
+                 ae_set_nr = None,
+                 k=None, depth=None,
                  ti = None,
                  fixed_enc:int=None):
         """
@@ -61,7 +62,9 @@ class MainPretrain(object):
         :param ti:
         :param fixed_enc: 2:
         """
-        
+
+        if ae_set_nr is not None:
+            self.ae_set_nr = ae_set_nr
         if k is not None:
             self.k = k
         if depth is not None:
@@ -92,7 +95,29 @@ class MainPretrain(object):
         # w_out should be 2+4*n
         
         w_checker = 512
-        h_x, w_x = self.img_x.shape[:2]
+
+        if self.ae_set_nr is not None:
+
+            img_x = []
+            for set_nr in self.ae_set_nr:
+
+                if set_nr == 10:
+                    df = get_10lamb()
+                elif set_nr == 13:
+                    df = get_13zach()
+                elif set_nr == 19:
+                    df = get_19hand()
+
+                img_x_i = xy_from_df(df, mod)[0]
+
+                img_x.append()
+
+        else:
+            raise NotImplementedError()
+
+            img_x_lst = [self.img_x]
+
+        h_x, w_x = img_x.shape[:2]
         
         x_ae_tr = []
         x_ae_te = []
@@ -101,7 +126,7 @@ class MainPretrain(object):
                 
                 h0 = i*w_checker
                 w0 = j*w_checker
-                crop_x = self.img_x[h0:h0+w_checker, w0:w0+w_checker, ...]
+                crop_x = img_x[h0:h0+w_checker, w0:w0+w_checker, ...]
                 
                 if (i + j)%2 == 0:
                     x_ae_tr.append(crop_x)
@@ -895,23 +920,35 @@ if __name__ == '__main__':
     if 0:
         for depth in [1]:
             for k in range(2, 20):
-                
+
                 print(f'k = {k}')
                 try:
-                    Main(k, depth, ti = True, fixed_enc=2)
-                except Exception: print('fail1')
+                    Main(k, depth, ti=True, fixed_enc=2)
+                except Exception:
+                    print('fail1')
 
     """
     fixed_enc = -1: No initialisation
     """
-    MainTransfer(set_nr=13,
-                 k=12,
-                 i_fold=0,
-                 fixed_enc=2,
-                 ti=True,
-                 depth=1
-                 )
-    
+    if 0:
+        MainTransfer(set_nr=13,
+                     k=12,
+                     i_fold=0,
+                     fixed_enc=2,
+                     ti=True,
+                     depth=1
+                     )
+
+    if 1:
+        # TODO Pretrain 2 pooling layers, with split
+        # AE trained on 10, 13 and 19.
+        MainPretrain(ae_set_nr=[10, 13, 19],
+                     k=12,
+                     ti=True,
+                     fixed_enc=0,
+                     depth=2
+                     )
+
     # for depth in [1]:
     #     for k in range(15, 31):
     #         # Ignore exceptions for now
