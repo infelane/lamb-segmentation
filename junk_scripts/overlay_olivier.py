@@ -56,7 +56,7 @@ def script_overlay(im_orig, im_colour):
 
 if __name__ == '__main__':
 
-    # TODO
+    # TODO Adjust to where images are located
     f = 'C:/Users/admin/downloads'
 
     im0 = np.array(Image.open(os.path.join(f, 'o0.jpg')))   # The rgb image
