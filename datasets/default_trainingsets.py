@@ -2,7 +2,7 @@ import numpy as np
 
 from .training import TrainData
 
-from data.example_splits import panel19withoutRightBot, panel13withoutRightBot
+from datasets.example_splits import panel19withoutRightBot, panel13withoutRightBot
 from data.conversion_tools import annotations2y, img2array
 from data.modalities import get_mod_set
 from datasets.examples import get_19hand, get_13zach, get_10lamb, get_10lamb_kfold
@@ -17,15 +17,14 @@ def get_10lamb_old(mod):
     
     img_x, img_y = xy_from_df(get_10lamb(), mod)
     
-    train_data = TrainData(img_x, img_y, img_y)
+    train_data = TrainData(img_x, img_y, np.zeros(img_y.shape))
 
     return train_data
 
 
 def get_10lamb_6patches(mod):
     img_x = x_from_df(get_10lamb(), mod)
-    
-    from datasets.shared_methods import DataFolder
+
     df_kfold_annot = get_10lamb_kfold()
 
     lst_names = [f'annot_{i+1}' for i in range(6)]
@@ -48,7 +47,20 @@ def get_13(mod, debug=False):
     return train_data
 
 
-def get_13botleftshuang(mod, n_per_class = 80, debug=False):
+def get_1319(mod):
+    img_x13, img_y13 = xy_from_df(get_13zach(), 5)
+    img_x19, img_y19 = xy_from_df(get_19hand(), 5)
+
+    img_x = [img_x13, img_x19]
+    img_y = [img_y13, img_y19]
+
+    # No test data
+    train_data = TrainData(img_x, img_y, [np.zeros(shape=img_y_i.shape) for img_y_i in img_y])
+
+    return train_data
+
+
+def get_13botleftshuang(mod, n_per_class=80, debug=False):
     """
     John the evangelist see Journal 2020 S. Huang
     :param mod:

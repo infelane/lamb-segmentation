@@ -11,10 +11,10 @@ if int(tf.__version__.split('.')[0]) >= 2:
     from tensorflow.keras.preprocessing.image import ImageDataGenerator as ImageDataGeneratorOrig, NumpyArrayIterator, \
         array_to_img
 
-    """ NumpyArrayIterator is inherited from NumpyArrayIteratorPre """
-    # from tensorflow.keras.preprocessing.image import image
-    # NumpyArrayIteratorPre = image.NumpyArrayIterator
-    from tensorflow.keras.preprocessing.image import NumpyArrayIterator as NumpyArrayIteratorPre
+    """ NumpyArrayIterator is inherited from NumpyArrayIteratorPre"""
+    from keras_preprocessing import image
+    # from tensorflow.keras.preprocessing.im import image
+    NumpyArrayIteratorPre = image.NumpyArrayIterator
 
     from tensorflow.keras import backend as K
 

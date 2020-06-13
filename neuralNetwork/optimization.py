@@ -6,9 +6,21 @@ from .import_keras import *
 
 def find_learning_rate(model, training_data, class_weight=None, verbose=1,
                        lr0=1e-5,
-                       lr1 = 1e+5,
+                       lr1=1e+5,
                        ):
-    
+
+    # try:
+    #     from tensorflow.keras.models import clone_model
+    # except:
+    #     from keras.models import clone_model
+
+    model_copy = model
+    # # TODO implement correctly
+    # model_copy = clone_model(model)  # To not train the model!
+    # model_copy.compile(model.optimizer,
+    #                    model.loss,
+    #                    )
+
     n = 20
 
     lr_range = [lr0 * (lr1/lr0)**(i/n) for i in range(n+1)]
@@ -19,14 +31,18 @@ def find_learning_rate(model, training_data, class_weight=None, verbose=1,
 
     lrScheduler = LearningRateScheduler(scheduler)
 
-    from keras.preprocessing.image import Iterator
+    try:
+        from tensorflow.keras.preprocessing.image import Iterator
+    except:
+        from keras.preprocessing.image import Iterator
+
     if isinstance(training_data, Iterator):
         flow_tr = training_data     # alias
-        hist = model.fit_generator(flow_tr, epochs=n+1, steps_per_epoch=100, callbacks=[lrScheduler],
+        hist = model_copy.fit_generator(flow_tr, epochs=n+1, steps_per_epoch=100, callbacks=[lrScheduler],
                                    class_weight=class_weight,
                                    verbose=verbose)
     else:
-        hist = model.fit(*training_data, epochs=n+1, callbacks=[lrScheduler], class_weight=class_weight,
+        hist = model_copy.fit(*training_data, epochs=n+1, callbacks=[lrScheduler], class_weight=class_weight,
                          verbose=verbose)
     
     df = pd.DataFrame.from_dict(hist.history)

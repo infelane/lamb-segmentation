@@ -1,11 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from data.example_splits import panel19withoutRightBot
-from data.conversion_tools import annotations2y, y2bool_annot, img2array, batch2img
-from data.modalities import get_mod_set
-from datasets.examples import get_19hand
-from datasets.default_trainingsets import get_train19_topleft, get_13botleftshuang, get_19SE_shuang
+from data.conversion_tools import img2array, batch2img
+from datasets.default_trainingsets import get_13botleftshuang, get_19SE_shuang
 from methods.basic import Threshholding, local_thresholding
 from plotting import concurrent
 from methods.examples import neuralNet0

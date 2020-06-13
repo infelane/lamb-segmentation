@@ -25,10 +25,13 @@ def optimal_test_thresh(y_pred, y_tr, y_te, verbose=1, d_thresh = .1, thresh0=0,
     :param thresh1:
     :return:
     """
-    
+
     ### Preprocessing
-    (y_pred, _, y_te) = map(batch2img, (y_pred, y_tr, y_te))
-    
+    if y_tr is None:
+        y_pred, y_te = map(batch2img, (y_pred, y_te))
+    else:
+        (y_pred, _, y_te) = map(batch2img, (y_pred, y_tr, y_te))
+
     # Filter nonzero:
     y_te, y_pred = filter_non_zero(y_te, y_pred)
 
@@ -119,7 +122,7 @@ def optimal_test_thresh_equal_distribution(y_true, y_pred, mask_true=True):
     return thresh
 
 
-def test_thresh_incremental(y_pred, y_tr, y_te, n, verbose=0, thresh0=0, thresh1=1, n_incr=10):
+def test_thresh_incremental(y_pred, y_tr=None, y_te=None, n=1, verbose=0, thresh0=0, thresh1=1, n_incr=10):
     
     assert n_incr >= 3
     
@@ -131,6 +134,76 @@ def test_thresh_incremental(y_pred, y_tr, y_te, n, verbose=0, thresh0=0, thresh1
         thresh1 = test_thresh + d_thresh
         
     return test_thresh
+
+
+def test_thresh_optimal(y_pred, y_test, metric='kappa'):
+
+    # Precalculations
+    ## Remove non-important values
+    y_test_non0, y_pred_non0 = filter_non_zero(y_test, y_pred)
+
+    y_te_argmax = np.argmax(y_test_non0, axis=-1)
+
+    def m(t):
+
+        y_pred_thresh_argmax = get_y_pred_thresh_argmax(y_pred_non0, t)
+
+        acc_te, jacc_te, kappa_te = _get_scores(y_te_argmax, y_pred_thresh_argmax)
+
+        if metric == 'kappa':
+            mm = kappa_te
+        elif metric == 'jaccard':
+            mm = jacc_te
+        elif metric == 'accuracy':
+            mm = acc_te
+        else:
+            raise ValueError(metric)
+
+        return mm
+
+    t0_old = 0.
+    t1_old = 1.
+
+    v0_old = m(t0_old)
+    v1_old = m(t1_old)
+
+    t_lst_max = .5
+    v_max = m(t_lst_max)
+
+    delta = .5
+
+    while delta > .01:
+
+        t0_new = (t0_old + t_lst_max)/2.
+        t1_new = (t_lst_max + t1_old)/2.
+
+        v0_new = m(t0_new)
+        v1_new = m(t1_new)
+
+        t_lst = [t0_old, t0_new, t_lst_max, t1_new, t1_old]
+        v_lst = [v0_old, v0_new, v_max, v1_new, v1_old]
+
+        i_max, v_max = max(enumerate(v_lst), key=lambda x: x[1])
+
+        if i_max == len(t_lst) - 1:  # Last element is biggest
+            i_max += -1  # Just act as if index before is best.
+
+        elif i_max == 0:  # First element is biggest
+            i_max += 1  # Just act as if index after is best.
+
+        assert 1 <= i_max <= len(t_lst) - 1 - 1
+
+        t_lst_max = t_lst[i_max]
+
+        t0_old = t_lst[i_max - 1]
+        t1_old = t_lst[i_max + 1]
+
+        v0_old = v_lst[i_max - 1]
+        v1_old = v_lst[i_max + 1]
+
+        delta = (t1_old - t0_old) / 2
+
+    return t_lst_max
 
 
 def filter_non_zero(y_true, y_pred):

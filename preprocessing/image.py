@@ -1,7 +1,11 @@
 import os
 import numpy as np
 
-from keras.preprocessing.image import NumpyArrayIterator
+try:
+    from tensorflow.keras.preprocessing.image import NumpyArrayIterator
+except (ImportError, ModuleNotFoundError):
+    from keras.preprocessing.image import NumpyArrayIterator
+
 from neuralNetwork.import_keras import ImageDataGeneratorOrig, NumpyArrayIteratorPre, K, \
     array_to_img
 from data.conversion_tools import y2bool_annot
@@ -254,7 +258,8 @@ class NumpyArrayCropIterator(NumpyArrayIterator):
             raise NotImplementedError('channels last only!', self.data_format)
         
         n = sum([np.count_nonzero(mask_i) for mask_i in mask])
-        
+
+        from keras_preprocessing.image.numpy_array_iterator import NumpyArrayIterator as NumpyArrayIteratorPre
         super(NumpyArrayIteratorPre, self).__init__(n, batch_size, shuffle, seed)
     
     # Overwrite

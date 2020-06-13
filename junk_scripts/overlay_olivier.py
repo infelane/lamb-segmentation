@@ -20,13 +20,20 @@ def cmap_func(b):
             overlay_colour = np.reshape([0, 255, 255], (1, 1, 3))
             return overlay_colour
 
-        elif 1:     # Use a more fancy colourmap
+        elif 0:     # Use a more fancy colourmap
             assert b.shape[-1] == 1
             # cm.jet: from blue to yellow to red
             # Ignore alpha
             # Working in UINT8
-            return cm.jet(b[:, :, 0])[..., :3]*255
 
+            return cm.viridis(b[:, :, 0])[..., :3]*255
+
+        elif 1:
+            # Blue to green:
+            def b2g(v):
+                return np.stack([0*v, v, (1-v)], axis=-1)
+
+            return b2g(b[:, :, 0]) * 255
         else:
             raise NotImplementedError()
 
@@ -46,25 +53,36 @@ def overlay(im_orig, b, alpha_max=.5):
     return im_overlay
 
 
-def script_overlay(im_orig, im_colour):
+def script_overlay(im_orig, im_colour, b_plot=False):
 
-    c = colour2single(im_orig)
+    c = colour2single(im_colour)
 
     im_overlay = overlay(im_orig, c)
+
+    if 1:
+        plt.figure()
+        plt.subplot(2, 2, 1)
+        plt.imshow(im_orig)
+        plt.subplot(2, 2, 2)
+        plt.imshow(c[..., 0])
+        plt.subplot(2, 2, 3)
+        plt.imshow(im_overlay)
+        plt.show()
+
     return im_overlay
 
 
 if __name__ == '__main__':
 
     # TODO Adjust to where images are located
-    f = 'C:/Users/admin/downloads'
+    f = 'C:/Users/admin/downloads/temp/temp'
 
     im0 = np.array(Image.open(os.path.join(f, 'o0.jpg')))   # The rgb image
     # im1 = np.array(Image.open(os.path.join(f, 'o1.jpg')))   # "square"
     im2 = np.array(Image.open(os.path.join(f, 'o2.jpg')))   # gradient map (with the grey background)
     im3 = np.array(Image.open(os.path.join(f, 'o3.jpg')))   # reduced gradient map
 
-    im_overlay2 = script_overlay(im0, im2)
+    im_overlay2 = script_overlay(im0, im2, b_plot=True)
     im_overlay3 = script_overlay(im0, im3)
 
     if 1:

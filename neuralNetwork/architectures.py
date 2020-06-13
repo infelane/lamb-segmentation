@@ -2,7 +2,11 @@
 # from neuralNetwork.import_keras.keras_general.models import Model
 
 from neuralNetwork.import_keras import Input, Conv2D, BatchNormalization, Activation, Model
-from keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D, UpSampling2D, Lambda, concatenate
+
+try:
+    from tensorflow.keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D, UpSampling2D, Lambda, concatenate, Conv2DTranspose
+except (ImportError, ModuleNotFoundError):
+    from keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D, UpSampling2D, Lambda, concatenate, Conv2DTranspose
 # from tensorflow.keras.layers import Cropping2D, Concatenate, Dropout, MaxPooling2D
 
 def fullyConnected1x1(n_in, k=1, w_in=None, batch_norm=False):
@@ -39,7 +43,7 @@ def fullyConnected1x1(n_in, k=1, w_in=None, batch_norm=False):
     return model
 
 
-def convNet(n_in, k=1, w_in=None, batch_norm=False, padding='valid'):
+def convNet(n_in, k=1, w_in=None, n_convs=1, batch_norm=False, padding='valid'):
     """
 
     :param n_in:
@@ -55,19 +59,23 @@ def convNet(n_in, k=1, w_in=None, batch_norm=False, padding='valid'):
 
     inputs = Input(shape=shape)
 
-    l = Conv2D(k, (3, 3), activation='elu', padding=padding)(inputs)
+    l = inputs
+    for i in range(n_convs):
 
-    if batch_norm:
-        l = BatchNormalization()(l)
+        l = Conv2D(k, (3, 3), activation='elu', padding=padding, name=f'conv{i}')(l)
 
-    outputs = Conv2D(2, (1, 1), activation='softmax')(l)
+        if batch_norm:
+            l = BatchNormalization(name=f'bnorm{i}')(l)
+
+    outputs = Conv2D(2, (1, 1), activation='softmax', name=f'fcc_classification')(l)
 
     model = Model(inputs=inputs, outputs=outputs)
 
     return model
 
 
-def unet(features_in, w=10, ext_in=0, filters=2, max_depth=1):
+def unet(features_in, w=10, ext_in=None, filters=2, max_depth=1, n_per_block=1,
+         act='elu'):
     """
     Builds up the original U-Net
     :param features_in:
@@ -87,17 +95,24 @@ def unet(features_in, w=10, ext_in=0, filters=2, max_depth=1):
         # Everytime *2 + 8
     :return:
     """
+
+    # diff_in_out = [4, 16, 40, 88, 184] if n_per_block == 2\
+    #     else [4, None, 24, None, None] if n_per_block == 1\
+    #     else NotImplementedError(n_per_block)
+
+    """
+    With pooling, not all input widths work!
+    """
+    # TODO do this better? Also, diff_in_out might not be consistent with downpooling!!
+
+    # w_in_rest = (w + diff_in_out[max_depth] + 4) % (2 ** max_depth)
+    # TODO implement cropping!
+    # w_in_perf = w + diff_in_out[max_depth] + w_in_rest
+    w_in_perf = w + 2 * ext_in
+    # w_out_perf = w + w_in_rest
     
-    diff_in_out = [4, 16, 40, 88, 184]
-    
-    w_in_rest = (w + diff_in_out[max_depth] + 4) % (2 ** max_depth)
-    w_in_perf = w + diff_in_out[max_depth] + w_in_rest
-    w_out_perf = w + w_in_rest
-    
-    assert w_in_perf <= w + 2 * ext_in, 'ext_in is too small'
-    
-    act = 'elu'
-    
+    # assert w_in_perf <= w + 2 * ext_in, 'ext_in is too small'
+
     w_in = w + ext_in * 2
     input_shape = [w_in, w_in, features_in]
     inputs = Input(shape=input_shape)
@@ -110,7 +125,8 @@ def unet(features_in, w=10, ext_in=0, filters=2, max_depth=1):
         
         def foo(l_prev):
             lefti = _gen_conv(filters * (2 ** depth), act=act, name='left{}_0'.format(depth))(l_prev)
-            lefti = _gen_conv(filters * (2 ** depth), act=act, name='left{}_1'.format(depth))(lefti)
+            if n_per_block == 2:
+                lefti = _gen_conv(filters * (2 ** depth), act=act, name='left{}_1'.format(depth))(lefti)
             return lefti
         
         return foo
@@ -123,42 +139,44 @@ def unet(features_in, w=10, ext_in=0, filters=2, max_depth=1):
         
         def foo(l_prev):
             righti = _gen_conv(filters * (2 ** depth), act=act, name='right{}_0'.format(depth))(l_prev)
-            righti = _gen_conv(filters * (2 ** depth), act=act, name='right{}_1'.format(depth))(righti)
+            if n_per_block == 2:
+                righti = _gen_conv(filters * (2 ** depth), act=act, name='right{}_1'.format(depth))(righti)
             return righti
         
         return foo
-    
+
     delta_w = w_in - w_in_perf
     ext_l = delta_w // 2
     ext_r = delta_w - ext_l
-    input_crop = Cropping2D(((ext_l, ext_r), (ext_l, ext_r)))(inputs)
+    input_crop = Cropping2D(((ext_l, ext_r), )*2)(inputs)
     
     left_lst = []
     w_left_lst = []
     for i in range(max_depth + 1):
         if i == 0:
             downi = input_crop
-            # TODO
-            # w_left_lst.append(w_in-4)
-            w_left_lst.append(w_in_perf - 4)
+
         else:
-            downi = MaxPooling2D((2, 2), strides=(2, 2), name='down{}'.format(i - 1))(left_lst[-1])
-            w_left_lst.append(w_left_lst[-1] // 2 - 4)
+            downi = MaxPooling2D((2, 2), strides=(2, 2), name=f'down{i-1}')(left_lst[-1])
+
         lefti = left_block(i)(downi)
         left_lst.append(lefti)
-    
+
+        w_left_lst.append(lefti.get_shape()[-2])
+
     right_lst = [None for _ in range(max_depth)]
     w_right_lst = [None for _ in range(max_depth)]
     for i in range(max_depth - 1, -1, -1):  # starts at max_depth-1!
         if i == max_depth - 1:
             upi = Conv2DTranspose(filters=filters * (2 ** i), kernel_size=(2, 2), strides=(2, 2),
                                   name='up{}'.format(i))(left_lst[i + 1])
-            w_right_lst[i] = w_left_lst[i + 1] * 2
+
         else:
             upi = Conv2DTranspose(filters=filters * (2 ** i), kernel_size=(2, 2), strides=(2, 2),
                                   name='up{}'.format(i)
                                   )(right_lst[i + 1])
-            w_right_lst[i] = (w_right_lst[i + 1] - 4) * 2
+
+        w_right_lst[i] = upi.get_shape()[-2]
         
         delta_w = w_left_lst[i] - w_right_lst[i]
         ext_l = delta_w // 2
@@ -172,9 +190,13 @@ def unet(features_in, w=10, ext_in=0, filters=2, max_depth=1):
     
     outputs = Conv2D(filters=2, kernel_size=(1, 1), activation='softmax', name='fcc')(right_lst[0])
     # outputs = Conv2D(filters=2, kernel_size=(1, 1), activation='softmax')(right0)
-    
-    # delta_w = w_right_lst[0] - 4 - w
-    delta_w = w_out_perf - w  # TODO
+
+    w_out = outputs.get_shape()[-2]
+
+    delta_w = w_out - w  # TODO
+
+    assert delta_w >= 0, f'Input should be at least {-delta_w} pixels wider.'
+
     ext_l = delta_w // 2
     ext_r = delta_w - ext_l
     outputs = Cropping2D(((ext_l, ext_r), (ext_l, ext_r)))(outputs)
@@ -206,7 +228,7 @@ def ti_unet(features_in, w=10, ext_in=0, filters=2, max_depth=1, dropout=False, 
     """
     
     diff_in_out = [4, 18, 46, 102, 214] if n_per_block == 2\
-        else [None, 10, None, None, None] if n_per_block == 1\
+        else [None, 10, 26, None, None] if n_per_block == 1\
         else NotImplementedError(n_per_block)
     
     w_in_perf = w + diff_in_out[max_depth]

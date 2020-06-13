@@ -5,6 +5,7 @@ import pandas as pd
 from PIL import Image
 from data.postprocessing import img_to_uint8
 
+
 def imread(path):
     im = np.array(Image.open(path))
     return im
@@ -26,7 +27,7 @@ def imsave(path, array, b_check_duplicate=True):
     return
 
 
-def pandas_save(path, df, append=False, overwrite=False, index = False, sep=';', *args, **kwargs):
+def pandas_save(path, df, append=False, overwrite=False, index=False, sep=';', *args, **kwargs):
     
     if not overwrite and os.path.exists(path):
         if append:

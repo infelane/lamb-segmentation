@@ -1,12 +1,20 @@
 import numpy as np
 
-import keras.backend as K
+try:
+    import tensorflow.keras.backend as K
+except (ImportError, ModuleNotFoundError):
+    import keras.backend as K
+
 # import tensorflow.keras.backend as K
 import tensorflow as tf
 
 from .basic import NeuralNet
 
-from keras.losses import mse, binary_crossentropy
+try:
+    from tensorflow.keras.losses import mse, binary_crossentropy
+except (ImportError, ModuleNotFoundError):
+    from keras.losses import mse, binary_crossentropy
+
 from neuralNetwork.import_keras import SGD, categorical_crossentropy, Adam, Nadam
 from neuralNetwork.architectures import fullyConnected1x1, convNet, unet, ti_unet, autoencoder
 from data.modalities import get_mod_n_in
@@ -113,7 +121,7 @@ def weighted_categorical_crossentropy(weights):
                                     True)
             _epsilon = tf.convert_to_tensor(K.epsilon(), dtype=output.dtype.base_dtype)
             output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
-            weighted_losses = target * tf.log(output) * weights
+            weighted_losses = target * tf.math.log(output) * weights
             return - tf.reduce_sum(weighted_losses, len(output.get_shape()) - 1)
         else:
             raise ValueError('WeightedCategoricalCrossentropy: not valid with logits')
@@ -138,10 +146,10 @@ def kappa_loss(y_pred, y_true, y_pow=1, eps=1e-10, N=2, bsize=32, name='kappa'):
     y_true = tf.reshape(y_true, (-1, N))
 
     with tf.name_scope(name):
-        y_true = tf.to_float(y_true)
-        repeat_op = tf.to_float(tf.tile(tf.reshape(tf.range(0, N), [N, 1]), [1, N]))
+        y_true = tf.cast(y_true, float)
+        repeat_op = tf.cast(tf.tile(tf.reshape(tf.range(0, N), [N, 1]), [1, N]), float)
         repeat_op_sq = tf.square((repeat_op - tf.transpose(repeat_op)))
-        weights = repeat_op_sq / tf.to_float((N - 1) ** 2)
+        weights = repeat_op_sq / tf.cast((N - 1) ** 2, float)
     
         pred_ = y_pred ** y_pow
         try:
@@ -157,6 +165,6 @@ def kappa_loss(y_pred, y_true, y_pow=1, eps=1e-10, N=2, bsize=32, name='kappa'):
         nom = tf.reduce_sum(weights * conf_mat)
         denom = tf.reduce_sum(weights * tf.matmul(
             tf.reshape(hist_rater_a, [N, 1]), tf.reshape(hist_rater_b, [1, N])) /
-                              tf.to_float(bsize))
+                              tf.cast(bsize, float))
     
         return nom / (denom + eps)

@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from keras.models import load_model, Model
+
+try:
+    from tensorflow.keras.models import load_model, Model
+except (ImportError, ModuleNotFoundError):
+    from keras.models import load_model, Model
 
 from data.conversion_tools import img2array, batch2img
 from data.preprocessing import rescale0to1
@@ -58,9 +62,7 @@ def main():
     img_x = train_data_all.get_x_train()
     img_x = rescale0to1(img_x)
     img_y_all = train_data_all.get_y_train()
-    
 
-    
     for k in k_range:
         for i_fold in fold_range:
             

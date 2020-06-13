@@ -4,14 +4,19 @@ import numpy as np
 
 import skimage.filters as filters
 
-from keras.preprocessing.image import NumpyArrayIterator
-from keras.callbacks import ModelCheckpoint, TensorBoard
+try:
+    from tensorflow.keras.preprocessing.image import NumpyArrayIterator
+    from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+except (ImportError, ModuleNotFoundError):
+    from keras.preprocessing.image import NumpyArrayIterator
+    from keras.callbacks import ModelCheckpoint, TensorBoard
 # from tensorflow.keras.preprocessing.image import NumpyArrayIterator
 # from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 
 from data.conversion_tools import batch2img
 from neuralNetwork.results import inference
 from preprocessing.image import get_flow
+from data.preprocessing import rescale0to1
 
 
 class Base(object):
@@ -32,37 +37,65 @@ class Threshholding(Base):
         gray = np.mean(x_img, axis=2)
         
         return np.greater_equal(gray, thresh)
-    
+
 
 class NeuralNet(Base):
     epoch=0
-    def __init__(self, model, w_ext=0):
-        
-        
+    def __init__(self, model, w_ext=0,
+                 norm_x=False):
+
         self.model = model
         
         self.w_ext = w_ext
+
+        self.norm_x = norm_x
         
     def load(self, folder, epoch):
         self.model.load_weights(os.path.join(folder, f'w_{epoch}.h5'))
         self.epoch = epoch
         
     def predict(self, x_img, w=None):
-        return self.method(x_img, w=w)
+        if self.norm_x:
+            print('normalising input')
+            x = rescale0to1(x_img)
+        else:
+            x = x_img
+
+        return self.method(x, w=w)
     
     def method(self, x_img, w=None):
-        return inference(self.model, x_img, w=w, w_ext=self.w_ext)
+        if self.norm_x:
+            print('normalising input')
+            x = rescale0to1(x_img)
+        else:
+            x = x_img
+
+        return inference(self.model, x, w=w, w_ext=self.w_ext)
         
-    def train(self, xy, validation=None, epochs=1, verbose=1, info='scratch'):
+    def train(self, xy, validation=None, epochs=1, verbose=1, info='scratch',
+              steps_per_epoch=100
+              ):
         """
         
         :param xy: Can be either tuple of (x, y) or Keras Generator
         :param validation:
         :param epochs:
-        :param class_weight:
         :param verbose:
+        :param info:
+        :param steps_per_epoch:
         :return:
         """
+
+        if self.norm_x:
+            print('normalising input')
+
+            assert isinstance(xy, tuple)
+
+            x, y = xy
+
+            x = rescale0to1(x)
+
+            xy = (x, y)
         
         def get_flow_xy(xy):
             if isinstance(xy, tuple):
@@ -76,16 +109,16 @@ class NeuralNet(Base):
                 
             else:
                 raise TypeError(f'Unkown type for xy: {type(xy)}')
-        
-        steps_per_epoch = 100
-        
+
         flow_tr = get_flow_xy(xy)
         
         flow_va = get_flow_xy(validation) if (validation is not None) else None
 
-        folder_checkpoint =  os.path.join('/scratch/lameeus/data/ghent_altar/net_weight', info)
+        folder_base = 'C:/Users/admin/Data/ghent_altar/' if os.name == 'nt' else '/scratch/lameeus/data/ghent_altar/'
+
+        folder_checkpoint = os.path.join(folder_base, 'net_weight', info)
         filepath_checkpoint = os.path.join(folder_checkpoint, 'w_{epoch}.h5')
-        folder_tensorboard = os.path.join('/scratch/lameeus/data/ghent_altar/logs/', info)
+        folder_tensorboard = os.path.join(folder_base, 'logs', info)
         
         if not os.path.exists(folder_checkpoint):
             os.makedirs(folder_checkpoint)

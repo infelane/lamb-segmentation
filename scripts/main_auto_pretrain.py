@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from keras.models import load_model, Model
+try:
+    from tensorflow.keras.models import load_model, Model
+except (ImportError, ModuleNotFoundError):
+    from keras.models import load_model, Model
+
 
 from data.conversion_tools import img2array, batch2img, img2batch
 from data.datatools import pandas_save

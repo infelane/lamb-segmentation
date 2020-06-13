@@ -5,7 +5,6 @@ from plotting import concurrent
 
 
 class Data(dict):
-    _imgs = {}
     def __init__(self):
         
         assert self._imgs
@@ -47,6 +46,7 @@ class Data(dict):
 
 class DataFolder(Data):
     def __init__(self, folder):
+        self._imgs = {}
 
         # TODO only read image on the spot (less memory intensive)
         for file in os.listdir(folder):
