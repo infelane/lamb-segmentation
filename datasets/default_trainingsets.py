@@ -139,7 +139,30 @@ def get_train19_topleft(mod):
     return train_data
 
 
-def get_19SE_shuang(mod, n_per_class = 80, debug=False):
+def get_19SE_shuang(mod, n_per_class = 80, debug=False, seed=None):
+    """
+    John the evangelist see Journal 2020 S. Huang
+    :param mod:
+    :param n_per_class:
+    :return:
+    """
+    
+    img_x, img_y_full = xy_from_df(get_19hand(), mod)
+    _, img_y = panel19withoutRightBot(img_y_full)
+    
+    img_y_tr, img_y_te = _split_train_n_per_class(img_y, n_per_class, seed=seed)
+
+    if debug:
+        import matplotlib.pyplot as plt
+        plt.imshow(np.sum(img_y_tr, axis=-1))
+        plt.show()
+
+    train_data = TrainData(img_x, img_y_tr, img_y_te)
+
+    return train_data
+
+
+def get_19SE_shuang_crack(mod, n_per_class=80, debug=False, n_outputs = 2):
     """
     John the evangelist see Journal 2020 S. Huang
     :param mod:
@@ -151,14 +174,40 @@ def get_19SE_shuang(mod, n_per_class = 80, debug=False):
     _, img_y = panel19withoutRightBot(img_y_full)
     
     img_y_tr, img_y_te = _split_train_n_per_class(img_y, n_per_class)
+   
+    from data.datatools import imread
+    
+    img_y_tr_crack300 = imread("/home/lameeus/data/ghent_altar/input/hierarchy/19_small/grd_crack.png")
+    
+    # Init
+    img_y_tr_crack = np.zeros(img_y.shape)
+    # Watch out, both classes are now marked as one
+    img_y_tr_crack[1083:1083+300,1740:1740+300, :][img_y_tr_crack300 > 0, :] = 1
+    
+    img_y_tr_crack, _ = _split_train_n_per_class(img_y_tr_crack, n_per_class)
+    img_y_tr_crack[..., 1] = 0  # Fix from above!
 
+
+    if n_outputs == 2:
+        img_y_tr_dual = np.logical_or(img_y_tr, img_y_tr_crack)
+
+    elif n_outputs == 3:
+        # Add a third class: Cracks
+        img_y_tr_dual = np.concatenate([img_y_tr, img_y_tr_crack[..., :1]], axis=-1)
+    
+    else:
+        raise ValueError(n_per_class)
+    
+
+    assert 2*n_per_class <= np.sum(img_y_tr_dual) <= 3*n_per_class
+    
     if debug:
         import matplotlib.pyplot as plt
         plt.imshow(np.sum(img_y_tr, axis=-1))
         plt.show()
-
-    train_data = TrainData(img_x, img_y_tr, img_y_te)
-
+    
+    train_data = TrainData(img_x, img_y_tr_dual, img_y_te)
+    
     return train_data
 
 
@@ -175,7 +224,7 @@ def x_from_df(df, mod):
     return img_x
     
     
-def _split_train_n_per_class(img_y, n_per_class):
+def _split_train_n_per_class(img_y, n_per_class, seed=None):
     
     assert len(img_y.shape) == 3
     
@@ -189,16 +238,9 @@ def _split_train_n_per_class(img_y, n_per_class):
     b_flat0 = img_y[..., 0].flatten().astype(bool)
     b_flat1 = img_y[..., 1].flatten().astype(bool)
     
-    def _shuffle(arr):
-        # always the same shuffle!
-        arr_shuffle = np.copy(arr)
-        np.random.seed(314)
-        np.random.shuffle(arr_shuffle)
-        return arr_shuffle
-
-    idx_shuffled = _shuffle(idx_flat)
-    b_shuffle0 = _shuffle(b_flat0)
-    b_shuffle1 = _shuffle(b_flat1)
+    idx_shuffled = _shuffle(idx_flat, seed=seed)
+    b_shuffle0 = _shuffle(b_flat0, seed=seed)
+    b_shuffle1 = _shuffle(b_flat1, seed=seed)
     
     idx0 = idx_shuffled[b_shuffle0][:n_per_class]
     idx1 = idx_shuffled[b_shuffle1][:n_per_class]
@@ -252,3 +294,15 @@ class KFoldTrainData(object):
         
         train_data = TrainData(self.x_img, y_all, np.zeros(y_all.shape, dtype=y_all.dtype))
         return train_data
+
+
+def _shuffle(arr, seed=None):
+    
+    if seed is None:
+        seed = 314
+    
+    # always the same shuffle!
+    arr_shuffle = np.copy(arr)
+    np.random.seed(seed)
+    np.random.shuffle(arr_shuffle)
+    return arr_shuffle

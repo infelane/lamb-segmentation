@@ -10,12 +10,13 @@ import numpy as np
 
 from scripts import standard_keras2
 
-from datasets.default_trainingsets import get_13botleftshuang, get_19SE_shuang, get_1319, get_10lamb_old
-from main_general import get_training_data
 from methods.basic import NeuralNet
 from methods.examples import compile_segm
 from neuralNetwork.architectures import ti_unet, convNet, unet
 from preprocessing.image import get_flow
+from main_general import get_training_data
+
+from scripts.journal_paper.comparison_sh.shared import load_data
 
 # Settings (fixed)
 model_name = 'ti-unet'  # ti-unet
@@ -26,7 +27,7 @@ model_name = 'ti-unet'  # ti-unet
 '10' '1319' '13botright' '19botright'
 """
 
-d = 2
+d = 1
 
 w_patch = 10
 if d == 1:
@@ -49,95 +50,31 @@ else:
 flow_tr = None
 
 
-def load_data(data_name):
-
-    def _data10nat():
-        # Sparse annotations
-        train_data = get_10lamb_old(5)
-
-        from datasets.examples import get_10lamb
-        from data.conversion_tools import annotations2y
-        train_data.y_tr = annotations2y(get_10lamb().get("annot_tflearning"))
-
-        return train_data
-
-    if data_name == '13botright':
-        train_data = get_13botleftshuang(5, n_per_class=n_per_class)
-
-    elif data_name == '19botright':
-        train_data = get_19SE_shuang(5, n_per_class=n_per_class)
-
-    elif data_name == '1319':
-        train_data = get_1319(5)
-
-    elif data_name.split('_')[-1] == '10':
-
-        # Sparse annotations
-        train_data = get_10lamb_old(5)
-
-    elif data_name.split('_')[-1] == '101319':
-        from datasets.default_trainingsets import xy_from_df, get_13zach, get_19hand, get_10lamb, TrainData
-
-        img_x10, img_y10 = xy_from_df(get_10lamb(), 5)
-        img_x13, img_y13 = xy_from_df(get_13zach(), 5)
-        img_x19, img_y19 = xy_from_df(get_19hand(), 5)
-
-        img_x = [img_x10, img_x13, img_x19]
-        img_y = [img_y10, img_y13, img_y19]
-
-        # No test data
-        train_data = TrainData(img_x, img_y, [np.zeros(shape=img_y_i.shape) for img_y_i in img_y])
-
-    elif data_name.split('_')[-1] == '10nat':
-        train_data = _data10nat()
-
-    elif data_name.split('_')[-1] == '10nat1319':
-        from datasets.default_trainingsets import TrainData
-
-        train_data10 = _data10nat()
-        train_data1319 = get_1319(5)
-
-        img_x = [train_data10.get_x_train()] + train_data1319.get_x_train()
-        img_y = [train_data10.get_y_train()] + train_data1319.get_y_train()
-
-        train_data = TrainData(img_x,
-                               img_y, [np.zeros(shape=img_y_i.shape) for img_y_i in img_y])
-
-    else:
-        raise ValueError(data_name)
-
-    from data.preprocessing import rescale0to1
-    train_data.x = rescale0to1(train_data.x)
-
-    x_train, y_train, _, _ = get_training_data(train_data)
-
-    global flow_tr
-    flow_tr = get_flow(x_train, y_train,
-                       w_patch=w_patch,
-                       w_ext_in=w_ext_in
-                       )
-
-    return x_train, y_train
-
-
 class Main(object):
 
     def __init__(self,
-                 k=None
+                 k=None,
+                 seed=None
                  ):
 
         if k is not None:
             self.k = k
+        
+        self.seed = seed
 
         self.model()
 
         self.train()
 
     def model(self, b_optimal_lr=False):
+    
+        features_out = 3 if data_name == '19botrightcrack3' else 2
 
         if model_name == 'ti-unet':
             model = ti_unet(9, filters=self.k, w=w_patch, ext_in=w_ext_in // 2, batch_norm=True,
-                            max_depth=d)
+                            max_depth=d,
+                            features_out=features_out,
+                            )
 
         elif model_name == 'unet':
             # model = ti_unet(9, filters=self.k, w=w_patch, ext_in=w_ext_in // 2, batch_norm=True,
@@ -179,7 +116,9 @@ class Main(object):
                 info = '_'.join([info, f'n{n_per_class}'])
         except NameError:
             pass  # If n_per_class does not exist, don't add it
-
+        
+        if self.seed is not None:
+            info += f'_s{self.seed}'
 
         self.neural_net.train(flow_tr,
                               # validation=flow_va,
@@ -195,6 +134,16 @@ class Main(object):
 
 
 if __name__ == '__main__':
+    
+    def set_flow(train_data):
+    
+        x_train, y_train, _, _ = get_training_data(train_data)
+        
+        global flow_tr
+        flow_tr = get_flow(x_train, y_train,
+                           w_patch=w_patch,
+                           w_ext_in=w_ext_in
+                           )
 
     if 0:
         x_train, y_train = load_data()
@@ -205,23 +154,33 @@ if __name__ == '__main__':
             Main(k=k)
 
     elif 0:
+        
+        data_name = '1319botright'
+        # data_name = '19botrightcrack3'   # '19botright, '19botrightcrack', '19botrightcrack3'
 
-        data_name = '19botright'
-
-        # model_name = 'ti-unet'  # ti-unet
-        # k = 9
-        # for n_per_class in [640, 1280]:
-        #
-        #     x_train, y_train = load_data()
-        #     Main(k=k)
-
-        model_name = 'unet'  # ti-unet
+        model_name = 'ti-unet'  # ti-unet
 
         k = 9
-        for n_per_class in [20]:
-            x_train, y_train = load_data(data_name)
+        for n_per_class in [80, 160, 320, 640, 1280]:
+            train_data = load_data(data_name, n_per_class)
+            set_flow(train_data)
             Main(k=k)
 
+    elif 1:
+        """
+        Multiple iterations for graph 10
+        """
+        
+        data_name = '19botright'
+        k = 9
+
+        for model_name in ['ti-unet', 'unet']:
+            for n_per_class in [80, 160, 320, 640, 1280, 20, 40]:
+                for seed in [100, 200, 300]:
+                    train_data = load_data(data_name, n_per_class, seed=seed)
+                    set_flow(train_data)
+                    Main(k=k, seed=seed)
+    
     elif 0:
 
         n_per_class = None
@@ -235,7 +194,8 @@ if __name__ == '__main__':
 
         for data_name in ['1319', '10', '1319_10', '1319_101319']:    # ,
 
-            x_train, y_train = load_data(data_name)
+            train_data = load_data(data_name, n_per_class)
+            set_flow(train_data)
 
             k = 10
             Main(k=k)
@@ -248,6 +208,7 @@ if __name__ == '__main__':
 
         for data_name in ['1319_10nat', '10nat', '1319_10nat1319']:    # , '1319_10nat', '10nat'
 
-            x_train, y_train = load_data(data_name)
+            train_data = load_data(data_name, n_per_class)
+            set_flow(train_data)
 
             Main(k=10)

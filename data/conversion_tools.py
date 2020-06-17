@@ -101,6 +101,9 @@ def img2batch(x):
 
 def batch2img(x):
     
+    if isinstance(x, list):
+        return [batch2img(x_i) for x_i in x]
+    
     assert (len(x.shape) <= 4), x.shape
     
     if len(x.shape) == 4:

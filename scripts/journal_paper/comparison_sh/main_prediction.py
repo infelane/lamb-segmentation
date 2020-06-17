@@ -12,7 +12,7 @@ from plotting import concurrent
 from scripts.scripts_performance.main_performance import load_model_quick
 from scripts.main_simple import _eval_func_single
 
-data = '19botright'     # '13botright', '19botright'
+data = '1319botright'     # 1319botright, 19botrightcrack 19botrightcrack13 '13botright', '19botright'
 
 # Evaluation data:
 from datasets.examples import get_10lamb, get_10lamb_kfold
@@ -261,6 +261,38 @@ def data_lamb():
     return img_x, img_y_val
 
 
+def eval_3outputs():
+    
+    folder_base = 'C:/Users/admin/Data/ghent_altar/' if os.name == 'nt' else '/scratch/lameeus/data/ghent_altar/'
+
+    assert data == '19botrightcrack3'
+    
+    k = 9
+    epoch = 25
+    model_name = 'ti-unet'
+
+    folder_base = 'C:/Users/admin/Data/ghent_altar/' if os.name == 'nt' else '/scratch/lameeus/data/ghent_altar/'
+    path = os.path.join(folder_base, f'net_weight/{data}/{model_name}_d1_k{k}_n80/w_{epoch}.h5')
+
+    model = load_model_quick(path)
+    neural_net = NeuralNet(model, w_ext=10, norm_x=True)
+    
+    from scripts.journal_paper.comparison_sh.shared import load_data
+    a = load_data("19botright", 80)
+    img_x, y_eval = a.get_x_train(), a.get_y_test()
+
+    y_pred = neural_net.predict(img_x)
+    
+    assert y_pred.shape[-1] == 3
+    y_pred2 = np.stack([1 - y_pred[..., 1], y_pred[..., 1]], axis=-1)
+
+    data_i = _eval_func_single(y_eval, y_pred2)
+    
+    print(data_i)
+    
+    return
+
+
 if __name__ == '__main__':
     """
     Decide which model to take
@@ -269,7 +301,7 @@ if __name__ == '__main__':
     if 0:
         influence_n_per_class()     # Only check this for the moment
 
-    elif 1:
+    elif 0: # 1!
         
         # What is a good init?
         if 0:
@@ -326,45 +358,52 @@ if __name__ == '__main__':
 
         transfer_learning(b_plot=True)
 
-    df = pd.read_csv(f'C:/Users/admin/OneDrive - ugentbe/data/dataframes/{data}_{"tiunet"}.csv', delimiter=';')
+    elif 0:
+        eval_3outputs()
+
+    folder_base_df = 'C:/Users/admin/OneDrive - ugentbe/data/dataframes/' if os.name == 'nt' else f'/home/lameeus/data/ghent_altar/dataframes'
+
+    df = pd.read_csv(os.path.join(folder_base_df, f'{data}_{"ti-unet"}_n_per_class.csv'), delimiter=';')
 
     i_max = df['kappa'].idxmax()
 
     k, epoch = map(int, df.iloc[i_max][['k', 'epoch']])
 
     model_name = 'ti-unet'
-    path = f'C:/Users/admin/Data/ghent_altar/net_weight/{data}/{model_name}_d1_k{k}_n80/w_{epoch}.h5'
+
+    folder_base = 'C:/Users/admin/Data/ghent_altar/' if os.name == 'nt' else '/scratch/lameeus/data/ghent_altar/'
+
+    path = os.path.join(folder_base, f'net_weight/{data}/{model_name}_d1_k{k}_n80/w_{epoch}.h5')
 
     model = load_model_quick(path)
     neural_net = NeuralNet(model, w_ext=10, norm_x=True)
 
     # Image
-    if data == '13botright':
-        from datasets.default_trainingsets import xy_from_df, get_13zach
+    
+    from scripts.journal_paper.comparison_sh.shared import load_data
 
-        img_x, img_y = xy_from_df(get_13zach(), 5)
-
-    elif data == '19botright':
-        from datasets.default_trainingsets import xy_from_df, get_19hand
-
-        img_x, img_y = xy_from_df(get_19hand(), 5)
-
+    if data == '1319botright':
+        a = load_data("19botright", n_per_class=80)
     else:
-        raise ValueError(data)
+        a = load_data(data, n_per_class=80)
+    img_x, img_y = a.get_x_train(), a.get_y_test()
 
     y_pred = neural_net.predict(img_x)
 
-    if 1:
-        # Average out prediction
+    def average_out_pred(r = 2):
+        model_name = 'ti-unet'
+        
+        path = os.path.join(folder_base, f'net_weight/{data}/{model_name}_d1_k{k}_n80/w_{1}.h5')
+        model_i = load_model_quick(path)
+
+        neural_net_i = NeuralNet(model_i, w_ext=10, norm_x=True)
+        
         y_pred_lst = []
         r = 2
         for epoch_i in range(epoch-r, epoch+r+1): # epochs
-
-            model_name = 'ti-unet'
-            path = f'C:/Users/admin/Data/ghent_altar/net_weight/{data}/{model_name}_d1_k{k}_n80/w_{epoch_i}.h5'
-            model_i = load_model_quick(path)
-            neural_net_i = NeuralNet(model_i, w_ext=10, norm_x=True)
-
+            
+            neural_net_i.load(path.rsplit('/',1)[0], epoch_i) # Load
+            
             try:
                 y_pred_i = neural_net_i.predict(img_x)
             except Exception as e:
@@ -373,7 +412,14 @@ if __name__ == '__main__':
 
             y_pred_lst.append(y_pred_i[..., 1])
         y_pred_avg = np.mean(y_pred_lst, axis=0)
+        
+        return y_pred_avg
+        
+    if 1:
+        # Average out prediction
 
+        y_pred_avg = average_out_pred()
+        
         if 0:
             concurrent([y_pred_avg])
 

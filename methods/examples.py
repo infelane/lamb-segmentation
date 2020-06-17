@@ -22,7 +22,7 @@ from data.modalities import get_mod_n_in
 from performance.metrics import accuracy_with0, jaccard_with0
 
 
-def compile_segm(model, lr=1e-4, class_weights=(1, 1)):
+def compile_segm(model, lr=1e-4, class_weights=None):
     
     # optimizer = SGD(lr)
     # optimizer = Adam(lr)
@@ -30,7 +30,7 @@ def compile_segm(model, lr=1e-4, class_weights=(1, 1)):
 
     metrics = [accuracy_with0, jaccard_with0, kappa_loss]
 
-    if 0: loss = categorical_crossentropy
+    if class_weights is None: loss = categorical_crossentropy
     else: loss = weighted_categorical_crossentropy(class_weights)
     
     model.compile(optimizer, loss=loss, metrics=metrics)
