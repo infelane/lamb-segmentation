@@ -12,7 +12,7 @@ from plotting import concurrent
 from scripts.scripts_performance.main_performance import load_model_quick
 from scripts.main_simple import _eval_func_single
 
-data = '1319botright'     # 1319botright, 19botrightcrack 19botrightcrack13 '13botright', '19botright'
+data = '19botright'     # 1319botright, 19botrightcrack 19botrightcrack13 '13botright', '19botright'
 
 # Evaluation data:
 from datasets.examples import get_10lamb, get_10lamb_kfold
@@ -293,6 +293,110 @@ def eval_3outputs():
     return
 
 
+class Evaluater(object):
+    def __init__(self, y_true, y_pred, metric="kappa"):
+        """
+        With automated threshold that optimizes metric
+        :param y_true:
+        :param y_pred:
+        """
+
+        assert np.all(np.equal(y_true.astype(bool).astype(int), y_true))
+
+        assert y_true.shape[-1] == y_pred.shape[-1] == 2
+
+        self.y_true = y_true
+        self.y_pred = y_pred
+
+        self.metric = metric
+
+    def get_prod_acc(self):
+
+        try:
+            self.prod_acc
+        except AttributeError:
+            self._auto_eval()
+            self._auto_cm()
+
+        return self.prod_acc
+
+    def get_user_acc(self):
+
+        try:
+            self.user_acc
+        except AttributeError:
+            self._auto_eval()
+            self._auto_cm()
+
+        return self.user_acc
+
+    def get_oa(self):
+        try:
+            self.acc
+        except AttributeError:
+            self._auto_eval()
+
+        return self.acc
+
+    def get_kappa(self):
+
+        try:
+            self.kappa
+        except AttributeError:
+            self._auto_eval()
+
+        return self.kappa
+
+    def get_jaccard(self):
+
+        try:
+            self.jaccard
+        except AttributeError:
+            self._auto_eval()
+
+        return self.jaccard
+
+    def _auto_eval(self):
+        data_i = _eval_func_single(self.y_true, self.y_pred, metric=self.metric)
+
+        self.t = data_i["thresh"]
+        self.kappa = data_i["kappa"]
+        self.acc = data_i["accuracy"]
+        self.jaccard = data_i["jaccard"]
+
+    def _auto_cm(self):
+        # TODO with threshold calculate user acc
+        from sklearn.metrics import confusion_matrix
+
+        from performance.testing import filter_non_zero, get_y_pred_thresh
+
+        y_true_filter, y_pred_filter = filter_non_zero(self.y_true, self.y_pred)
+        y_pred_filter_thresh = get_y_pred_thresh(y_pred_filter, self.t)
+
+        y_true_arg = np.argmax(y_true_filter, axis=-1)
+        y_pred_arg = np.argmax(y_pred_filter_thresh, axis=-1)
+
+        cm = confusion_matrix(y_true_arg, y_pred_arg)
+
+        diag = np.diag(cm)
+
+        # producer accuracy: TP/n_GT
+        prod = np.sum(cm, axis=0)  # Sum along first axis (sum of each column) Producer
+
+        self.prod_acc = diag/prod
+
+        # User accuracy: TP/n_classified
+        user = np.sum(cm, axis=1)  # Sum along second axis (sum of each row)   User
+
+        self.user_acc = diag/user
+    def summary(self):
+
+        print("oa =", self.get_oa())
+        print("prod acc =", self.get_prod_acc())
+        print("user acc =", self.get_user_acc())
+        print("kappa =", self.get_kappa())
+        print("jaccard =", self.get_jaccard())
+
 if __name__ == '__main__':
     """
     Decide which model to take
@@ -390,6 +494,10 @@ if __name__ == '__main__':
 
     y_pred = neural_net.predict(img_x)
 
+    if 1:
+        Evaluater(img_y, y_pred).summary()
+        print("For the tables!")
+
     def average_out_pred(r = 2):
         model_name = 'ti-unet'
         
@@ -424,8 +532,6 @@ if __name__ == '__main__':
             concurrent([y_pred_avg])
 
         y_pred_avg2 = np.stack([1-y_pred_avg, y_pred_avg], axis=-1)
-
-        from scripts.main_simple import _eval_func_single
 
         data_i = _eval_func_single(get_crop(img_y), get_crop(y_pred_avg2))
         print(data_i)
