@@ -44,7 +44,7 @@ def gen_n_per_class():
 
     k = 9
 
-    for n_per_class in [10, 20, 40, 80, 160, 320, 640, 1280]:  # [10, 20, 40, 80, 160, 320, 640, 1280]
+    for n_per_class in [1280, 640, 320, 160, 80, 40, 20, 10]:  # [10, 20, 40, 80, 160, 320, 640, 1280]
         
         for s in [None, 100, 200, 300]:
             yield {'k': k,
@@ -59,8 +59,7 @@ class Main(object):
 
     def __init__(self):
 
-
-        l = []
+        self.l = []
 
         if set_eval == 'k':
 
@@ -115,7 +114,7 @@ class Main(object):
                 if seed is not None:
                     data_i['seed'] = seed
 
-                l.append(data_i)
+                self.l.append(data_i)
 
                 if metric == 'kappa':
                     return data_i['kappa']
@@ -173,34 +172,9 @@ class Main(object):
                     break
                 delta = delta_temp
 
-        df = pd.DataFrame(l)
+            self.safe()
 
-        def plot(df, metric):
-            fig, ax = plt.subplots()
-            for label, df_i in df.groupby(set_eval):
-                df_i.sort_values('epoch').plot('epoch', metric, ax=ax, label=label)
-            plt.legend()
-            plt.ylabel(metric)
-            plt.show()
-
-        if 1:
-            # all relevant info
-            l_info = [data_train]
-    
-            if data_eval != data_train:
-                l_info.append(data_eval)
-    
-            l_info += [model_name, set_eval]
-    
-            folder_base_df = 'C:/Users/admin/OneDrive - ugentbe/data/dataframes/' if os.name == 'nt' else f'/home/lameeus/data/ghent_altar/dataframes'
-    
-            filepath = os.path.join(folder_base_df, f'{"_".join(l_info)}.csv')
-            
-            print('saving:')
-            pandas_save(filepath, df, append=True)
-
-        plot(df, 'kappa')
-        plot(df, 'accuracy')
+        self.safe(plot=True)
 
         print('init done')
 
@@ -289,6 +263,40 @@ class Main(object):
         data_i = _eval_func_single(self.y_val, y_pred, metric=metric)
 
         return data_i
+
+    def safe(self, plot=False):
+        
+        df = pd.DataFrame(self.l)
+        
+        if plot:
+            plot(df, 'kappa')
+            plot(df, 'accuracy')
+    
+        # all relevant info
+        l_info = [data_train]
+    
+        if data_eval != data_train:
+            l_info.append(data_eval)
+    
+        l_info += [model_name, set_eval]
+    
+        folder_base_df = 'C:/Users/admin/OneDrive - ugentbe/data/dataframes/' if os.name == 'nt' else f'/home/lameeus/data/ghent_altar/dataframes'
+    
+        filepath = os.path.join(folder_base_df, f'{"_".join(l_info)}.csv')
+    
+        print('saving:')
+        pandas_save(filepath, df, append=True)
+        
+        self.l = [] # Empty again!
+
+
+def plot(df, metric):
+    fig, ax = plt.subplots()
+    for label, df_i in df.groupby(set_eval):
+        df_i.sort_values('epoch').plot('epoch', metric, ax=ax, label=label)
+    plt.legend()
+    plt.ylabel(metric)
+    plt.show()
 
 
 if __name__ == '__main__':
